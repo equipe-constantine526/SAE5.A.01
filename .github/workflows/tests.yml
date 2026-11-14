@@ -1,0 +1,80 @@
+# Tests automatiques : se lancent à chaque pull request et à chaque push sur main.
+# Résultat visible sur GitHub : coche verte = tout passe, croix rouge = quelque chose a cassé.
+# Une PR avec une croix rouge ne doit pas être mergée.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (pytest + doc)
+    runs-on: ubuntu-latest
+
+    # Une vraie base PostgreSQL temporaire, créée pour les tests puis détruite.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: rigmatch
+          POSTGRES_PASSWORD: rigmatch
+          POSTGRES_DB: rigmatch
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://rigmatch:rigmatch@localhost:5432/rigmatch
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Créer les tables
+        run: psql "$DATABASE_URL" -f models/schema.sql
+
+      - name: Lancer les tests
+        run: pytest -v
+
+      # Si un fichier ne s'importe pas (erreur de syntaxe, import cassé), la génération échoue.
+      - name: Vérifier que la documentation se génère
+        run: pdoc -d markdown ./app.py controllers services models scripts -o /tmp/doc
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      # Les étapes suivantes ne tournent que lorsque le projet Vue existe (frontend/package.json).
+      - name: Installer Node
+        if: hashFiles('frontend/package.json') != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Installer les dépendances
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: npm ci
+
+      - name: Construire le front
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: npm run build
