@@ -7,11 +7,13 @@ CREATE TABLE IF NOT EXISTS composant (
     type          TEXT NOT NULL,          -- cpu, carte_mere, ram, gpu, alim, boitier
     nom           TEXT NOT NULL,
     famille       TEXT,                   -- ex. "RTX 4070" : nœud du graphe (chantier C)
-    prix          NUMERIC,
+    prix          DOUBLE PRECISION,
     -- TODO A1/A2 : colonnes de caractéristiques (socket, type_ram, format, puissance, perf, ...)
     socket        TEXT,
     type_ram      TEXT,
-    perf          NUMERIC                 -- indice de performance sur 100 (tâche 7)
+    frequence_boost_ghz   DOUBLE PRECISION,
+    tflops                DOUBLE PRECISION,
+    perf          DOUBLE PRECISION                -- indice de performance sur 100 (tâche 7)
 );
 
 CREATE TABLE IF NOT EXISTS configuration (
