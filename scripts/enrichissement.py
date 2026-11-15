@@ -126,6 +126,7 @@ def enrichir_type_ram_cm(df_cm):
 
 
 def main():
+    # Test de l'enrichissement des sockets CPU
     cpus = pd.DataFrame([
         {"id": 101, "nom": "AMD Ryzen 5 7600"},
         {"id": 102, "nom": "AMD Ryzen 7 7800X3D"},
@@ -134,8 +135,19 @@ def main():
     ])
 
     resultat = enrichir_socket_cpu(cpus)
-    print(resultat[["nom", "microarchitecture", "socket", "source"]].to_string(index=False))
+    print(resultat[["nom", "microarchitecture", "socket", "source"]].to_string(index=False, justify="left"))
+   
+    # Test de l'enrichissement RAM des cartes mères
+    cartes_meres = pd.DataFrame([
+        {"nom": "MSI B550 Gaming Plus", "socket": "AM4"},
+        {"nom": "MSI B650 Gaming Plus", "socket": "AM5"},
+        {"nom": "Gigabyte B760M GAMING PLUS WIFI DDR4", "socket": "LGA1700"},
+        {"nom": "MSI PRO B760-P WIFI", "socket": "LGA1700"},
+        {"nom": "Carte mère LGA1851", "socket": "LGA1851"},
+    ])
 
+    resultat_cm = enrichir_type_ram_cm(cartes_meres)
+    print(resultat_cm[["nom", "socket", "type_ram", "verifie"]].to_string(index=False, justify="left"))
 
 if __name__ == "__main__":
     main()
