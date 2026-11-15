@@ -12,7 +12,8 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CHEMIN_MICROARCH = BASE_DIR / "data" / "microarch_socket.csv"
-
+CHEMIN_GPU = BASE_DIR / "data" / "all-gpus.json"
+CHEMIN_VIDEO_CARD = BASE_DIR / "data" / "video-card.json"
 
 def norm(s):
     """Normalise un nom pour faciliter les jointures GPU."""
@@ -122,6 +123,33 @@ def enrichir_type_ram_cm(df_cm):
     df_cm["verifie"] = resultat.apply(lambda x: x[1])
 
     return df_cm
+def enrichir_infos_gpu():
+    """Enrichit les GPU docyx avec les informations RightNow."""
+
+    df_gpu = pd.read_json(CHEMIN_VIDEO_CARD)
+    base_gpu = pd.read_json(CHEMIN_GPU)
+
+    colonnes = ["name", "tdp", "suggestedPSU"]
+
+    for col in colonnes:
+        if col not in base_gpu.columns:
+            raise ValueError(f"Colonne {col} absente de all-gpus.json")
+
+    df_gpu["nom_normalise"] = df_gpu["chipset"].apply(norm)
+    base_gpu["nom_normalise"] = base_gpu["name"].apply(norm)
+
+    base_gpu = base_gpu.drop_duplicates(
+        subset=["nom_normalise"],
+        keep="first"
+    )
+
+    resultat = df_gpu.merge(
+        base_gpu[["nom_normalise", "tdp", "suggestedPSU"]],
+        on="nom_normalise",
+        how="left"
+    )
+
+    return resultat.drop(columns=["nom_normalise"])
 
 
 
