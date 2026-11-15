@@ -1,6 +1,6 @@
 """Importe les fiches du catalogue PC dans PostgreSQL.
 
-Responsable : A1 · Tâche 1
+Responsable : A1 · Tâches 1 et 2
 
 Placer les six fichiers JSON dans `data/` ou `data/json/`, puis lancer :
 `python -m scripts.import_catalogue`.
@@ -24,6 +24,27 @@ FICHIERS = {
     "alim": "power-supply.json",
     "boitier": "case.json",
 }
+
+# Choix : filtrer à l'import plutôt que modifier les JSON sources, pour conserver les
+# fichiers du catalogue intacts et pouvoir refaire l'import avec les critères du projet.
+MICROARCHITECTURES_RECENTES = (
+    "Zen 3",
+    "Zen 4",
+    "Zen 5",
+    "Alder Lake",
+    "Raptor Lake",
+    "Raptor Lake Refresh",
+    "Arrow Lake",
+)
+SOCKETS_RECENTS = ("AM4", "AM5", "LGA1700", "LGA1851")
+# Choix : reconnaître les séries GeForce et les variantes RTX Ada récentes explicitement;
+# un motif large « RTX 40/50 » inclurait aussi les anciens noms Quadro RTX 4000/5000.
+MOTIF_GPU_RECENTES = (
+    r"\bGeForce\s+RTX\s*(?:30|40|50)\d{2}\b"
+    r"|\bRTX\s+(?:4000|5000)(?:\s+SFF)?\s+Ada\b"
+    r"|\bRX\s*(?:6|7|9)\d{3}\b"
+    r"|\bArc\b"
+)
 
 COLONNES_BDD = (
     "type",
@@ -178,6 +199,44 @@ def _preparer_lignes(type_piece, donnees):
     return lignes
 
 
+def _filtrer_generations(type_piece, donnees):
+    """Garde les générations récentes définies dans le guide du chantier.
+
+    **Reçoit :** le type interne de pièce et ses fiches dans un `DataFrame`.
+
+    **Renvoie :** les lignes conservées : CPU Zen 3 à Zen 5 ou Intel récent,
+    cartes mères AM4/AM5/LGA1700/LGA1851, RAM DDR4/DDR5 et GPU GeForce RTX 30/40/50,
+    RX 6000/7000/9000 ou Arc. Les alimentations et boîtiers restent inchangés.
+
+    **Exemple :** une fiche `AMD Ryzen 7 9800X3D` en microarchitecture `Zen 5`
+    est conservée, tandis qu'une fiche `Zen 2` est écartée.
+
+    **Complexité :** O(n), n = nombre de fiches dans le fichier.
+    """
+    if type_piece == "cpu":
+        return donnees[
+            donnees["microarchitecture"].isin(MICROARCHITECTURES_RECENTES)
+        ]
+
+    if type_piece == "carte_mere":
+        return donnees[donnees["socket"].isin(SOCKETS_RECENTS)]
+
+    if type_piece == "ram":
+        lignes_recentes = []
+        for fiche in donnees.to_dict(orient="records"):
+            lignes_recentes.append(_type_ram(fiche) is not None)
+        return donnees[lignes_recentes]
+
+    if type_piece == "gpu":
+        chipsets = donnees["chipset"].fillna("")
+        masque = chipsets.str.contains(
+            MOTIF_GPU_RECENTES, case=False, regex=True, na=False
+        )
+        return donnees[masque]
+
+    return donnees
+
+
 def main():
     """Importe les six fichiers JSON dans la table `composant`.
 
@@ -196,6 +255,7 @@ def main():
             for type_piece, nom_fichier in FICHIERS.items():
                 chemin = _chemin_fichier(nom_fichier)
                 donnees = pd.read_json(chemin)
+                donnees = _filtrer_generations(type_piece, donnees)
                 lignes = _preparer_lignes(type_piece, donnees)
                 curseur.executemany(REQUETE_INSERTION, lignes)
                 nombres_importes[type_piece] = len(lignes)
