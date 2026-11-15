@@ -177,5 +177,10 @@ def main():
     resultat_cm = enrichir_type_ram_cm(cartes_meres)
     print(resultat_cm[["nom", "socket", "type_ram", "verifie"]].to_string(index=False, justify="left"))
 
+        # Test de l'enrichissement GPU
+    resultat_gpu = enrichir_infos_gpu()
+    print(resultat_gpu[["chipset", "memory", "tdp", "suggestedPSU"]].head(10).to_string(index=False, justify="left"))
+
+    
 if __name__ == "__main__":
     main()
