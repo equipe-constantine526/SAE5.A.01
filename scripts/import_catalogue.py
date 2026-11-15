@@ -1,8 +1,9 @@
 """Importe les fiches du catalogue PC dans PostgreSQL.
 
-Responsable : A1 · Tâches 1 et 2
+Responsable : A1 · Tâches 1, 2 et 7
 
-Placer les six fichiers JSON dans `data/` ou `data/json/`, puis lancer :
+Placer les six fichiers du catalogue dans `data/` ou `data/json/`, ainsi que
+`data/all-gpus.json`, puis lancer :
 `python -m scripts.import_catalogue`.
 L'import est à lancer une seule fois pour éviter les doublons dans la base.
 """
@@ -11,6 +12,9 @@ from pathlib import Path
 import pandas as pd
 
 from models.db import get_connection
+# Choix : réutiliser la même normalisation que l'enrichissement A2 évite que les deux
+# jointures donnent des correspondances différentes pour un même chipset.
+from scripts.enrichissement import norm
 
 DOSSIER_DONNEES = Path("data")
 
@@ -59,13 +63,17 @@ COLONNES_BDD = (
     "chipset",
     "conso_w",
     "puissance_w",
+    "tflops",
+    "perf",
+    "source",
 )
 
 REQUETE_INSERTION = """
     INSERT INTO composant (
         type, nom, prix, microarchitecture, nb_coeurs, frequence_boost,
-        socket, type_ram, format, chipset, conso_w, puissance_w
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        socket, type_ram, format, chipset, conso_w, puissance_w,
+        tflops, perf, source
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 """
 
 
@@ -140,36 +148,117 @@ def _type_ram(fiche):
     return None
 
 
+def _charger_tflops():
+    """Charge les indices FP32 GPU depuis le fichier de la tâche 6.
+
+    **Reçoit :** aucun argument ; lit `data/all-gpus.json`.
+
+    **Renvoie :** un dictionnaire associant un nom de chipset normalisé à ses TFLOPS.
+
+    **Exemple :** la fiche `GeForce RTX 4070` associe le chipset normalisé à `29.15` TFLOPS.
+
+    **Complexité :** O(g), g = nombre de fiches dans `all-gpus.json`.
+    """
+    chemin = DOSSIER_DONNEES / "all-gpus.json"
+    donnees = pd.read_json(chemin)
+    tflops_par_chipset = {}
+
+    for fiche in donnees.to_dict(orient="records"):
+        nom = _valeur(fiche, "name")
+        tflops = _valeur(fiche, "fp32")
+        if isinstance(nom, str) and nom and tflops is not None:
+            tflops_par_chipset[norm(nom)] = tflops
+
+    return tflops_par_chipset
+
+
+def _ajouter_performances(type_piece, donnees, tflops_par_chipset):
+    """Calcule et normalise l'indice de performance d'un type de pièce.
+
+    **Reçoit :** le type interne, un `DataFrame` filtré et le dictionnaire des TFLOPS.
+
+    **Renvoie :** une copie du tableau avec `tflops` et `perf`. Le CPU utilise
+    cœurs × fréquence boost ; le GPU utilise les TFLOPS FP32. Chaque valeur est
+    divisée par le maximum de son type puis multipliée par 100.
+
+    **Exemple :** le Ryzen 5 7600 produit une valeur brute de 30.6 (6 × 5.1) ;
+    une RTX 4070 utilise 29.15 TFLOPS avant normalisation dans son type.
+
+    **Complexité :** O(n), n = nombre de pièces du type traité.
+    """
+    resultat = donnees.copy()
+    resultat["tflops"] = None
+    resultat["perf"] = None
+
+    if type_piece == "cpu":
+        coeurs = pd.to_numeric(resultat["core_count"], errors="coerce")
+        frequence = pd.to_numeric(resultat["boost_clock"], errors="coerce")
+        performances_brutes = coeurs * frequence
+    elif type_piece == "gpu":
+        valeurs_tflops = []
+        for chipset in resultat["chipset"]:
+            if isinstance(chipset, str):
+                valeur = tflops_par_chipset.get(norm(chipset))
+            else:
+                valeur = None
+            valeurs_tflops.append(valeur)
+
+        resultat["tflops"] = valeurs_tflops
+        performances_brutes = pd.to_numeric(resultat["tflops"], errors="coerce")
+    else:
+        return resultat
+
+    meilleure_performance = performances_brutes.max()
+    if pd.isna(meilleure_performance) or meilleure_performance <= 0:
+        return resultat
+
+    resultat["perf"] = performances_brutes / meilleure_performance * 100
+    return resultat
+
+
 def _creer_ligne(type_piece, fiche):
     """Adapte les champs utiles du JSON aux colonnes de `composant`.
 
     **Reçoit :** le type interne de la pièce et sa fiche source. Exemple :
     `"gpu"` et une fiche de RTX 3060 avec `name`, `price` et `chipset`.
 
-    **Renvoie :** un dictionnaire contenant les colonnes à insérer, avec `None`
+    **Renvoie :** un dictionnaire contenant les 15 colonnes à insérer, avec `None`
     pour les caractéristiques qui ne concernent pas ce type.
 
     **Exemple :** une fiche `MSI GeForce RTX 3060 Ventus 2X 12G`, à `299.97`,
-    avec le chipset `GeForce RTX 3060 12GB` fournit `type="gpu"`, le nom, le prix
-    et le chipset correspondants.
+    avec le chipset `GeForce RTX 3060 12GB` fournit le nom, le prix, le chipset,
+    les TFLOPS associés et l'indice normalisé calculé en amont.
     """
     ligne = {colonne: None for colonne in COLONNES_BDD}
     ligne["type"] = type_piece
     ligne["nom"] = _valeur(fiche, "name")
     ligne["prix"] = _valeur(fiche, "price")
+    ligne["tflops"] = _valeur(fiche, "tflops")
+    ligne["perf"] = _valeur(fiche, "perf")
 
     if type_piece == "cpu":
         ligne["microarchitecture"] = _valeur(fiche, "microarchitecture")
         ligne["nb_coeurs"] = _valeur(fiche, "core_count")
         ligne["frequence_boost"] = _valeur(fiche, "boost_clock")
         ligne["conso_w"] = _valeur(fiche, "tdp")
+        if ligne["perf"] is not None:
+            ligne["source"] = (
+                "perf : cœurs × fréquence boost (docyx/pc-part-dataset)"
+            )
     elif type_piece == "carte_mere":
         ligne["socket"] = _valeur(fiche, "socket")
         ligne["format"] = _valeur(fiche, "form_factor")
     elif type_piece == "ram":
         ligne["type_ram"] = _type_ram(fiche)
+        if ligne["type_ram"] is not None:
+            ligne["source"] = "type_ram : speed[0] (docyx/pc-part-dataset)"
     elif type_piece == "gpu":
         ligne["chipset"] = _valeur(fiche, "chipset")
+        if ligne["tflops"] is not None and ligne["perf"] is not None:
+            ligne["source"] = (
+                "tflops : rightnow-ai/rightnow-gpu-database (fp32) ; "
+                "perf : indice FP32 normalisé sur 100"
+            )
     elif type_piece == "alim":
         ligne["puissance_w"] = _valeur(fiche, "wattage")
     elif type_piece == "boitier":
@@ -189,7 +278,7 @@ def _preparer_lignes(type_piece, donnees):
     **Exemple :** une fiche RTX 3060 du fichier `video-card.json` devient un tuple
     commençant par `("gpu", "MSI GeForce RTX 3060 Ventus 2X 12G", 299.97, ...)`.
 
-    **Complexité :** O(n × c), n = nombre de fiches et c = 12 colonnes insérées.
+    **Complexité :** O(n × c), n = nombre de fiches et c = 15 colonnes insérées.
     """
     lignes = []
     for fiche in donnees.to_dict(orient="records"):
@@ -238,17 +327,18 @@ def _filtrer_generations(type_piece, donnees):
 
 
 def main():
-    """Importe les six fichiers JSON dans la table `composant`.
+    """Importe le catalogue et les indices de performance dans `composant`.
 
     **Reçoit :** aucun argument.
 
     **Renvoie :** rien ; affiche le nombre de lignes importées pour chaque type.
 
     **Exemple :** `python -m scripts.import_catalogue` lit `video-card.json` et
-    insère une fiche GPU telle que la MSI GeForce RTX 3060 Ventus 2X 12G à 299.97 $.
+    utilise `all-gpus.json` pour associer 29.15 TFLOPS à la GeForce RTX 4070.
 
-    **Complexité :** O(n), n = nombre total de fiches lues dans les six fichiers.
+    **Complexité :** O(n + g), n = fiches du catalogue et g = fiches GPU de référence.
     """
+    tflops_par_chipset = _charger_tflops()
     nombres_importes = {}
     with get_connection() as connexion:
         with connexion.cursor() as curseur:
@@ -256,6 +346,9 @@ def main():
                 chemin = _chemin_fichier(nom_fichier)
                 donnees = pd.read_json(chemin)
                 donnees = _filtrer_generations(type_piece, donnees)
+                donnees = _ajouter_performances(
+                    type_piece, donnees, tflops_par_chipset
+                )
                 lignes = _preparer_lignes(type_piece, donnees)
                 curseur.executemany(REQUETE_INSERTION, lignes)
                 nombres_importes[type_piece] = len(lignes)
