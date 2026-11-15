@@ -92,6 +92,39 @@ def enrichir_socket_cpu(df_cpu):
     )
 
 
+def enrichir_type_ram_cm(df_cm):
+    """Déduit le type de RAM accepté par chaque carte mère."""
+    df_cm = df_cm.copy()
+
+    def determiner_ram(ligne):
+        socket = str(ligne.get("socket") or "").strip().upper()
+        nom = ligne.get("nom")
+
+        if socket == "AM4":
+            return "DDR4", True
+
+        if socket in ["AM5", "LGA1851"]:
+            return "DDR5", True
+
+        if socket == "LGA1700":
+            if isinstance(nom, str) and re.search(
+                r"\b(?:DDR4|D4)\b", nom, re.IGNORECASE
+            ):
+                return "DDR4", True
+
+            return "DDR5", False
+
+        return pd.NA, False
+
+    resultat = df_cm.apply(determiner_ram, axis=1)
+
+    df_cm["type_ram"] = resultat.apply(lambda x: x[0])
+    df_cm["verifie"] = resultat.apply(lambda x: x[1])
+
+    return df_cm
+
+
+
 def main():
     cpus = pd.DataFrame([
         {"id": 101, "nom": "AMD Ryzen 5 7600"},
