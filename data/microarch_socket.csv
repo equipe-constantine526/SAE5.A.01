@@ -1,0 +1,17 @@
+microarchitecture,socket,source
+Zen,AM4,AMD
+Zen+,AM4,AMD
+Zen 2,AM4,AMD
+Zen 3,AM4,AMD
+Zen 4,AM5,AMD
+Zen 5,AM5,AMD
+Skylake,LGA1151,Intel
+Kaby Lake,LGA1151,Intel
+Coffee Lake,LGA1151,Intel
+Coffee Lake Refresh,LGA1151,Intel
+Comet Lake,LGA1200,Intel
+Rocket Lake,LGA1200,Intel
+Alder Lake,LGA1700,Intel
+Raptor Lake,LGA1700,Intel
+Raptor Lake Refresh,LGA1700,Intel
+Arrow Lake,LGA1851,Intel
