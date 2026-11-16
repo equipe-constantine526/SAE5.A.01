@@ -6,33 +6,47 @@ Règles à coder :
   - puissance de l'alim >= alim conseillée de la carte graphique
   - format de la carte mère accepté par le boîtier
 """
+"""Filtre de compatibilité, partagé par les deux méthodes. Responsable : A2 (tâche 8)."""
+
 from models.db import query
 
-
-def compatibles(composants_ids, type_cherche):
-    """Renvoie les pièces de type `type_cherche` compatibles avec `composants_ids`.
-
-    Exemple : compatibles([412], "carte_mere") avec 412 = un CPU AM5
-              -> toutes les cartes mères AM5.
-    """
-    # TODO A2 : appliquer les règles ci-dessus.
-    # En attendant : toutes les pièces du type demandé, sans filtre.
-    return query(
-        "SELECT * FROM composant WHERE type = %s LIMIT 200",
-        (type_cherche,),
-    )
+FORMATS_ACCEPTES = {
+    "E-ATX": {"E-ATX", "ATX", "Micro ATX", "Mini ITX"},
+    "ATX": {"ATX", "Micro ATX", "Mini ITX"},
+    "Micro ATX": {"Micro ATX", "Mini ITX"},
+    "Mini ITX": {"Mini ITX"},
+}
 
 
-def config_valide(composants_ids):
-    """Renvoie (True, None) si la config complète est compatible, sinon (False, "raison").
-    Utilisée par l'ajout de config (C1, tâche 26)."""
-    # TODO A2
-    return True, None
+def normaliser_format(format_):
+  """Uniformise un format de carte mère ou boîtier.
+
+  **Reçoit :** `format_` (ex. `"Micro-ATX"`).
+  **Renvoie :** `"E-ATX"`, `"ATX"`, `"Micro ATX"`, `"Mini ITX"` ou `None`.
+  **Exemple :** `normaliser_format("mATX")` renvoie `"Micro ATX"`.
+  """
+  if not format_:
+    return None
+  f = format_.upper().replace(" ", "").replace("-", "").replace("_", "")
+  if "EATX" in f:
+    return "E-ATX"
+  if "MICROATX" in f or "MATX" in f:
+    return "Micro ATX"
+  if "MINIITX" in f or f == "ITX":
+    return "Mini ITX"
+  return "ATX" if "ATX" in f else None
 
 
-def rechercher(type_, texte):
-    """Recherche pour l'autocomplétion (tâche 9). 20 résultats max."""
-    return query(
-        "SELECT id, nom, prix FROM composant WHERE type = %s AND nom ILIKE %s ORDER BY nom LIMIT 20",
-        (type_, f"%{texte}%"),
-    )
+def format_compatible(carte_mere, boitier):
+  """Vérifie si le boîtier accepte le format de la carte mère.
+
+  **Reçoit :** `carte_mere` (dict) et `boitier` (dict).
+  **Renvoie :** `True` si compatible ou format inconnu, `False` sinon.
+  **Exemple :** `format_compatible({"format": "Micro ATX"}, {"format":
+  "ATX"})` renvoie `True`.
+  """
+  f_cm = normaliser_format(carte_mere.get("format"))
+  f_boitier = normaliser_format(boitier.get("format"))
+  if f_cm is None or f_boitier is None:
+    return True
+  return f_cm in FORMATS_ACCEPTES.get(f_boitier, set())
