@@ -67,15 +67,50 @@ def test_classement_place_le_meilleur_rapport_en_premier():
 
 
 def test_regle_equilibre_note_haut_pour_jeu_equilibre():
-    """Vérifie qu'un GPU proche du CPU reçoit une note élevée."""
+    """Vérifie la note d'un GPU légèrement moins performant que le CPU en jeu."""
     entree = {
         "composants": [
             {"type": "cpu", "perf": 80.0},
             {"type": "gpu", "perf": 75.0},
-        ]
+        ],
+        "usage": "jeu",
     }
 
-    assert regle_equilibre({"type": "gpu", "perf": 75.0}, entree) == pytest.approx(0.9375)
+    assert regle_equilibre({"type": "gpu", "perf": 75.0}, entree) == pytest.approx(0.95)
+
+
+def test_regle_equilibre_penalise_moins_un_gpu_plus_performant_en_jeu():
+    """Vérifie qu'un GPU plus performant fait moins baisser la note en jeu.
+
+    **Reçoit :** un CPU à 40, un GPU à 95 et l'usage `jeu`.
+    **Renvoie :** aucune valeur ; vérifie que la note d'équilibre vaut `0.725`.
+    **Exemple :** `(95 - 40) / 100 = 0.55`, puis `1 - 0.55 * 0.5 = 0.725`.
+    """
+    entree = {
+        "composants": [{"type": "cpu", "perf": 40.0}],
+        "usage": "jeu",
+    }
+
+    note = regle_equilibre({"type": "gpu", "perf": 95.0}, entree)
+
+    assert note == pytest.approx(0.725)
+
+
+def test_regle_equilibre_penalise_plus_un_gpu_plus_performant_en_montage():
+    """Vérifie qu'un GPU plus performant fait plus baisser la note en montage.
+
+    **Reçoit :** un CPU à 40, un GPU à 95 et l'usage `montage`.
+    **Renvoie :** aucune valeur ; vérifie que la note d'équilibre vaut `0.45`.
+    **Exemple :** `(95 - 40) / 100 = 0.55`, puis `1 - 0.55 = 0.45`.
+    """
+    entree = {
+        "composants": [{"type": "cpu", "perf": 40.0}],
+        "usage": "montage",
+    }
+
+    note = regle_equilibre({"type": "gpu", "perf": 95.0}, entree)
+
+    assert note == pytest.approx(0.45)
 
 
 def test_regle_equilibre_est_neutre_sans_cpu_ou_gpu():
@@ -90,7 +125,7 @@ def test_regle_equilibre_charge_perf_depuis_le_catalogue(monkeypatch):
 
     **Reçoit :** un GPU candidat à 75 points et l'identifiant `412` d'un CPU.
     **Renvoie :** aucune valeur ; vérifie que la fiche chargée a `perf=80` et que
-    le score obtenu est `0.9375`.
+    le score obtenu est `0.95` en jeu.
     **Exemple :** `regle_equilibre(gpu_75, {"composants": [412]})` charge le CPU 412.
     """
     requetes = []
@@ -106,7 +141,7 @@ def test_regle_equilibre_charge_perf_depuis_le_catalogue(monkeypatch):
 
     score = regle_equilibre({"type": "gpu", "perf": 75.0}, entree)
 
-    assert score == pytest.approx(0.9375)
+    assert score == pytest.approx(0.95)
     assert requetes[0][1] == (412,)
 
 
@@ -140,7 +175,7 @@ def test_classement_charge_les_ids_selectionnes_une_seule_fois(monkeypatch):
 
     **Reçoit :** l'ID `412` d'un CPU, un GPU candidat et un budget de 1 200 $.
     **Renvoie :** aucune valeur ; vérifie le score d'équilibre et une seule requête.
-    **Exemple :** le CPU chargé à 80 et le GPU candidat à 75 donnent `0.9375`.
+    **Exemple :** le CPU chargé à 80 et le GPU candidat à 75 donnent `0.95` en jeu.
     """
     appels = []
 
@@ -165,7 +200,7 @@ def test_classement_charge_les_ids_selectionnes_une_seule_fois(monkeypatch):
         {"composants": [412], "budget": 1200, "usage": "jeu"},
     )
 
-    assert resultats[0]["detail"]["equilibre"] == pytest.approx(0.9375)
+    assert resultats[0]["detail"]["equilibre"] == pytest.approx(0.95)
     assert appels == [(412,)]
 
 
