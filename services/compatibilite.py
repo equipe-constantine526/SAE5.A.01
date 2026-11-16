@@ -172,4 +172,5 @@ def rechercher(type_, texte):
       "SELECT id, nom, prix FROM composant WHERE type = %s AND nom ILIKE %s"
       " ORDER BY nom LIMIT 20",
       (type_, f"%{texte}%"),
-  )
+  ) 
+
