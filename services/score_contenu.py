@@ -309,6 +309,21 @@ def regle_budget(piece, entree):
     return budget_piece / prix
 
 
+def obtenir_score(resultat):
+    """Renvoie le score d'un résultat pour le tri des recommandations.
+
+    **Reçoit :** un dictionnaire de résultat, par exemple `{"nom": "RTX 4070",
+    "score": 0.87}`.
+
+    **Renvoie :** le score numérique du résultat, ici `0.87`.
+
+    **Exemple :** `obtenir_score({"score": 0.87})` renvoie `0.87`.
+
+    **Complexité :** O(1).
+    """
+    return resultat["score"]
+
+
 def classer(candidats, entree, top=10):
     """Classe les candidats selon les règles et les poids liés à l'usage.
 
@@ -341,5 +356,5 @@ def classer(candidats, entree, top=10):
             "id": piece["id"], "nom": piece["nom"], "prix": piece.get("prix"),
             "score": round(score, 3), "detail": detail,
         })
-    resultats.sort(key=lambda r: r["score"], reverse=True)
+    resultats.sort(key=obtenir_score, reverse=True)
     return resultats[:top]
