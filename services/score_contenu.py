@@ -145,18 +145,19 @@ def composants_selectionnes(entree):
 
 
 def regle_equilibre(piece, entree):
-    """Renvoie une note entre 0 et 1 selon l'équilibre CPU/GPU d'une pièce candidate.
+    """Note l'équilibre CPU/GPU selon l'usage et l'indice catalogue `perf`.
 
     **Reçoit :**
     - `piece` : une pièce candidate, ex. {"id": 501, "type": "gpu", "perf": 75.0}
     - `entree` : la requête utilisateur avec les composants déjà sélectionnés,
       sous forme d'identifiants ou de fiches, ex. {"composants": [412]}.
 
-    **Renvoie :** une note proche de 1 quand la pièce est bien équilibrée avec la
-    pièce de l'autre type déjà présente, ex. 0.9375 pour un GPU 75 avec un CPU 80.
+    **Renvoie :** une note entre 0 et 1. Un écart reste pénalisé, mais moins quand
+    le composant le plus performant correspond à l'usage : GPU pour le jeu, CPU
+    pour le montage vidéo.
 
-    **Exemple :** `regle_equilibre({"type": "gpu", "perf": 75.0}, {"composants": [{"type": "cpu", "perf": 80.0}]})`
-    renvoie 0.9375.
+    **Exemple :** avec un CPU à 40 et un GPU à 95, l'écart vaut `(95 - 40) / 100`,
+    soit `0.55`. La note est `0.725` en jeu et `0.45` en montage vidéo.
 
     **Complexité :** O(c), c = composants déjà présents, plus une requête SQL par
     identifiant si l'entrée contient des identifiants.
@@ -178,11 +179,29 @@ def regle_equilibre(piece, entree):
     if reference in (None, 0):
         return 0.5
 
-    # Choix : on compare la performance de la pièce à celle de son complémentaire déjà
-    # présent dans la config. Une paire CPU/GPU équilibrée a un ratio proche de 1 ;
-    # si l'un des deux est trop loin de l'autre, la note baisse progressivement.
-    ratio = piece_perf / reference
-    return max(0.0, min(1.0, 1.0 - abs(ratio - 1.0)))
+    if piece_type == "gpu":
+        performance_gpu = piece_perf
+        performance_cpu = reference
+    else:
+        performance_gpu = reference
+        performance_cpu = piece_perf
+
+    ecart = (performance_gpu - performance_cpu) / 100
+    usage = entree.get("usage", "jeu")
+    gpu_plus_performant = ecart > 0
+
+    # Choix : le guide indique quel composant peut être plus performant selon
+    # l'usage, mais ne donne pas de formule. On garde une pénalité pour l'écart
+    # (exemple CPU 40/GPU 95), réduite de moitié dans le sens favorisé par l'usage.
+    if usage == "jeu" and gpu_plus_performant:
+        coefficient_penalite = 0.5
+    elif usage == "montage" and not gpu_plus_performant:
+        coefficient_penalite = 0.5
+    else:
+        coefficient_penalite = 1.0
+
+    penalite = abs(ecart) * coefficient_penalite
+    return max(0.0, 1.0 - penalite)
 
 
 def regle_alim(piece, entree):
