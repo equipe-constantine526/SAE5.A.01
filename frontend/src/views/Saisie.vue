@@ -1,10 +1,11 @@
 <!-- Page d'entrée de la recommandation. Responsable : A1 · Tâche 11. -->
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const emit = defineEmits(['recommandation'])
 
 const adresseApi = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '')
+const cleSauvegarde = 'maConfig'
 
 const typesComposants = [
   { valeur: 'cpu', libelle: 'Processeur' },
@@ -32,11 +33,91 @@ const rechercheEnCours = ref(false)
 const envoiEnCours = ref(false)
 const erreurRecherche = ref('')
 const erreurEnvoi = ref('')
+const erreurSauvegarde = ref('')
 const message = ref('')
 
 let temporisateurRecherche
 
 const formulaireValide = computed(() => Number(budget.value) > 0 && usage.value && typeCherche.value)
+
+/**
+ * Restaure le formulaire depuis le stockage local du navigateur.
+ * @returns {void} Met à jour les champs si une sauvegarde valide existe.
+ * @example restaurerSaisie() remet un budget de 1200 et le Ryzen 5 7600 sélectionné.
+ */
+function restaurerSaisie() {
+  try {
+    const texteSauvegarde = localStorage.getItem(cleSauvegarde)
+    if (!texteSauvegarde) return
+
+    const sauvegarde = JSON.parse(texteSauvegarde)
+    if (!sauvegarde || typeof sauvegarde !== 'object') {
+      throw new Error('La sauvegarde n’a pas le bon format.')
+    }
+
+    const budgetSauvegarde = Number(sauvegarde.budget)
+    if (Number.isFinite(budgetSauvegarde) && budgetSauvegarde > 0) {
+      budget.value = budgetSauvegarde
+    }
+
+    if (usages.some((option) => option.valeur === sauvegarde.usage)) {
+      usage.value = sauvegarde.usage
+    }
+
+    if (typesComposants.some((type) => type.valeur === sauvegarde.type_cherche)) {
+      typeCherche.value = sauvegarde.type_cherche
+    }
+
+    if (Array.isArray(sauvegarde.composants)) {
+      composants.value = sauvegarde.composants
+        .filter((composant) => (
+          composant
+          && Number.isInteger(Number(composant.id))
+          && Number(composant.id) > 0
+          && typeof composant.nom === 'string'
+          && typesComposants.some((type) => type.valeur === composant.type)
+        ))
+        .map((composant) => ({
+          id: Number(composant.id),
+          nom: composant.nom,
+          prix: composant.prix,
+          type: composant.type,
+        }))
+    }
+  } catch {
+    erreurSauvegarde.value = 'La sauvegarde locale est illisible ou inaccessible. Vous pouvez continuer sans elle.'
+  }
+}
+
+/**
+ * Enregistre les choix du formulaire dans le navigateur.
+ * @returns {void} Écrit les valeurs utiles ou affiche un message si le stockage est bloqué.
+ * @example enregistrerSaisie() sauvegarde le budget 1200, l'usage « jeu » et les pièces choisies.
+ */
+function enregistrerSaisie() {
+  const sauvegarde = {
+    budget: budget.value,
+    usage: usage.value,
+    type_cherche: typeCherche.value,
+    // Choix : garder nom et type avec l'id pour réafficher les pièces sans refaire une recherche au rechargement.
+    composants: composants.value.map((composant) => ({
+      id: composant.id,
+      nom: composant.nom,
+      prix: composant.prix,
+      type: composant.type,
+    })),
+  }
+
+  try {
+    localStorage.setItem(cleSauvegarde, JSON.stringify(sauvegarde))
+    erreurSauvegarde.value = ''
+  } catch {
+    erreurSauvegarde.value = 'La sauvegarde locale est indisponible. Votre saisie reste utilisable jusqu’à la fermeture de la page.'
+  }
+}
+
+watch([budget, usage, typeCherche, composants], enregistrerSaisie, { deep: true })
+onMounted(restaurerSaisie)
 
 // Choix temporaire : garder la recherche dans cette page jusqu'à l'arrivée du composant partagé A2.
 // Il faudra le réutiliser ici et dans Ajouter ma config pour éviter deux recherches distinctes.
@@ -259,6 +340,7 @@ onBeforeUnmount(nettoyerRecherche)
       </section>
 
       <p v-if="erreurEnvoi" class="erreur" role="alert">{{ erreurEnvoi }}</p>
+      <p v-if="erreurSauvegarde" class="erreur" role="alert">{{ erreurSauvegarde }}</p>
       <p v-if="message" class="etat" role="status">{{ message }}</p>
 
       <button class="bouton-principal" type="submit" :disabled="!formulaireValide || envoiEnCours">
