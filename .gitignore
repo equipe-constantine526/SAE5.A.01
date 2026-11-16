@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 .env
 data/
+
+!data/
+!data/microarch_socket.csv
+!data/all-gpus.json
+!data/video-card.json
