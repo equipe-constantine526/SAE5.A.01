@@ -115,3 +115,48 @@ def compatibles(config, type_cherche):
       candidats = [c for c in candidats if format_compatible(p, c)]
 
   return candidats
+
+def config_valide(config):
+  """Vérifie si une configuration complète est compatible.
+
+  **Reçoit :** `config` (liste d'ids, ex. `[101, 201]`).
+  **Renvoie :** `(True, None)` ou `(False, "raison")`.
+  **Exemple :** `config_valide([101, 202])` -> `(False, "Socket
+  incompatible...")`.
+  **Complexité :** $O(p)$, $p =$ nombre de pièces ($\le 6$).
+  """
+  if not config:
+    return True, None
+  pieces = query("SELECT * FROM composant WHERE id = ANY(%s)", (config,))
+  par_type = {p["type"]: p for p in pieces}
+  cpu, cm, ram, gpu, alim, boitier = (
+      par_type.get(t)
+      for t in ("cpu", "carte_mere", "ram", "gpu", "alim", "boitier")
+  )
+
+  if (
+      cpu
+      and cm
+      and cpu.get("socket")
+      and cm.get("socket")
+      and cpu["socket"] != cm["socket"]
+  ):
+    return False, "Socket incompatible entre le CPU et la carte mère."
+  if (
+      ram
+      and cm
+      and ram.get("type_ram")
+      and cm.get("type_ram")
+      and ram["type_ram"] != cm["type_ram"]
+  ):
+    return False, "Type de RAM incompatible avec la carte mère."
+  if cm and boitier and not format_compatible(cm, boitier):
+    return False, "Format de carte mère incompatible avec le boîtier."
+  if alim and alim.get("puissance_w") is not None:
+    tdp_total = sum(p.get("tdp_w") or 0 for p in pieces)
+    seuil = max(
+        (gpu.get("alim_conseillee_w") or 0) if gpu else 0, tdp_total
+    )
+    if alim["puissance_w"] < seuil:
+      return False, "Puissance de l'alimentation insuffisante."
+  return True, None
