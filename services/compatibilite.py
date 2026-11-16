@@ -50,3 +50,68 @@ def format_compatible(carte_mere, boitier):
   if f_cm is None or f_boitier is None:
     return True
   return f_cm in FORMATS_ACCEPTES.get(f_boitier, set())
+
+def compatibles(config, type_cherche):
+  """Renvoie les composants compatibles avec la configuration possédée.
+
+  **Reçoit :** `config` (liste d'ids, ex. `[412]`), `type_cherche` (ex.
+  `"carte_mere"`).
+  **Renvoie :** liste de dicts des composants compatibles.
+  **Exemple :** `compatibles([412], "carte_mere")` renvoie les cartes mères
+  AM5.
+  **Complexité :** $O(p + n)$, $p =$ pièces possédées ($\le 6$), $n =$
+  candidats SQL.
+  """
+  if type_cherche not in {"cpu", "carte_mere", "ram", "gpu", "alim", "boitier"}:
+    raise ValueError(f"Type de composant inconnu : {type_cherche}")
+
+  possedes = (
+      query("SELECT * FROM composant WHERE id = ANY(%s)", (config,))
+      if config
+      else []
+  )
+  conditions, params = [], [type_cherche]
+  tdp_total = sum(p.get("tdp_w") or 0 for p in possedes)
+
+  for p in possedes:
+    paire = {type_cherche, p["type"]}
+    if paire == {"cpu", "carte_mere"} and p.get("socket"):
+      conditions.append("socket = %s")
+      params.append(p["socket"])
+    elif paire == {"ram", "carte_mere"} and p.get("type_ram"):
+      conditions.append("type_ram = %s")
+      params.append(p["type_ram"])
+    elif (
+        type_cherche == "alim"
+        and p["type"] == "gpu"
+        and p.get("alim_conseillee_w") is not None
+    ):
+      conditions.append("puissance_w >= %s")
+      params.append(max(p["alim_conseillee_w"], tdp_total))
+    elif (
+        type_cherche == "gpu"
+        and p["type"] == "alim"
+        and p.get("puissance_w") is not None
+    ):
+      conditions.append(
+          "(alim_conseillee_w IS NULL OR alim_conseillee_w <= %s)"
+      )
+      params.append(p["puissance_w"])
+
+  sql = "SELECT * FROM composant WHERE type = %s" + (
+      " AND " + " AND ".join(conditions) if conditions else ""
+  )
+  candidats = query(sql, tuple(params))
+
+  # OPTI (P-01) : filtrage des formats boîtier / carte mère en Python
+  # Maintenant : on filtre les formats en Python après la requête SQL (O(n)).
+  # Pourquoi c'est améliorable : transfert SQL de lignes rejetées ensuite.
+  # Piste : normaliser format à l'import et filtrer en SQL (WHERE format = ANY(%s)).
+  # Gain attendu : à mesurer.
+  for p in possedes:
+    if type_cherche == "carte_mere" and p["type"] == "boitier":
+      candidats = [c for c in candidats if format_compatible(c, p)]
+    elif type_cherche == "boitier" and p["type"] == "carte_mere":
+      candidats = [c for c in candidats if format_compatible(p, c)]
+
+  return candidats
