@@ -47,3 +47,13 @@ def test_cpu_am5_refuse_carte_mere_am4():
     assert 2 in ids
     assert 3 not in ids
     assert compatibilite.config_valide([1, 3])[0] is False
+
+    def test_carte_mere_ddr5_refuse_ram_ddr4():
+    ids = [
+        c["id"]
+        for c in compatibilite.compatibles([2], "ram")
+    ]
+
+    assert 4 in ids
+    assert 5 not in ids
+    assert compatibilite.config_valide([2, 5])[0] is False
