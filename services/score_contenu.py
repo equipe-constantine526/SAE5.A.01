@@ -5,6 +5,13 @@ Responsable : B1 · Tâches 15 à 18
 
 import math
 
+# Choix : les poids sont des priorités choisies pour le projet, pas des valeurs
+# mesurées. En jeu, on met l'accent sur le rapport perf/prix et l'équilibre ; en
+# montage, le budget pèse davantage, tandis que l'équilibre favorise déjà le CPU
+# dans sa propre règle. En bureautique, le budget devient prioritaire car le besoin
+# de performance est plus limité. L'alimentation garde 10 % partout : la compatibilité
+# vérifie déjà qu'elle est suffisante. Chaque ligne totalise 1 pour garder le score
+# final entre 0 et 1.
 POIDS = {
     "jeu":       {"perf_prix": 0.4, "equilibre": 0.3, "alim": 0.1, "budget": 0.2},
     "montage":   {"perf_prix": 0.3, "equilibre": 0.3, "alim": 0.1, "budget": 0.3},
