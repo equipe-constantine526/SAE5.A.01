@@ -741,3 +741,136 @@ onBeforeUnmount(() => {
     </p>
   </div>
 </template>
+<style scoped>
+.recherche-composant {
+  position: relative;
+  width: 100%;
+}
+
+.champ-conteneur {
+  position: relative;
+  width: 100%;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 0.9rem;
+  border: 2px solid #4a121a;
+  border-radius: 0.65rem;
+  background-color: #ffffff;
+  color: #1c1917;
+  font: inherit;
+}
+
+input:focus {
+  outline: none;
+  border-color: #72202b;
+  box-shadow: 0 0 0 3px rgba(74, 18, 26, 0.15);
+}
+
+.bouton-effacer {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #4a121a;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bouton-effacer:hover {
+  background-color: #fbf5f5;
+}
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  margin: 0.5rem 0 0;
+  padding: 0.45rem;
+  list-style: none;
+  background-color: #ffffff;
+  border: 2px solid #4a121a;
+  border-radius: 0.65rem;
+  box-shadow: 0 8px 20px rgba(74, 18, 26, 0.12);
+}
+
+.suggestions button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #f2e6e7;
+  border-radius: 0.45rem;
+  background-color: #ffffff;
+  color: #1c1917;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.suggestions button:hover,
+.suggestions button:focus-visible,
+.suggestions button.actif {
+  outline: none;
+  background-color: #fbf5f5;
+  border-color: #bd591e;
+}
+
+.nom {
+  font-weight: 600;
+}
+
+.infos-droite {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.badge-type {
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.35rem;
+  background-color: #4a121a;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.prix {
+  white-space: nowrap;
+  font-weight: 700;
+  color: #bd591e;
+}
+
+.message {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #72202b;
+}
+
+.erreur {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.45rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  font-size: 0.9rem;
+  color: #b42318;
+}
+</style>
