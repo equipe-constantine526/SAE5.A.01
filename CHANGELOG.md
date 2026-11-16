@@ -7,6 +7,9 @@ Les versions suivent la numérotation MAJEUR.MINEUR.CORRECTIF (Semantic Versioni
 
 <!-- Ce qui est mergé dans main mais pas encore dans une version taggée. -->
 
+### Ajouté
+- Page de saisie de la recommandation et envoi de la demande à l'API.
+
 ## [0.1.0] · 2026-11-18
 
 Première version fonctionnelle, non optimisée (point de départ des mesures).
