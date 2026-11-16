@@ -59,8 +59,7 @@ def compatibles(config, type_cherche):
   **Renvoie :** liste de dicts des composants compatibles.
   **Exemple :** `compatibles([412], "carte_mere")` renvoie les cartes mères
   AM5.
-  **Complexité :** $O(p + n)$, $p =$ pièces possédées ($\le 6$), $n =$
-  candidats SQL.
+  ******Complexité :** $O(p + n)$, $p =$ pièces possédées ($\\le 6$), $n =$.
   """
   if type_cherche not in {"cpu", "carte_mere", "ram", "gpu", "alim", "boitier"}:
     raise ValueError(f"Type de composant inconnu : {type_cherche}")
@@ -123,7 +122,7 @@ def config_valide(config):
   **Renvoie :** `(True, None)` ou `(False, "raison")`.
   **Exemple :** `config_valide([101, 202])` -> `(False, "Socket
   incompatible...")`.
-  **Complexité :** $O(p)$, $p =$ nombre de pièces ($\le 6$).
+  ****Complexité :** $O(p)$, $p =$ nombre de pièces ($\\le 6$).
   """
   if not config:
     return True, None
@@ -160,3 +159,17 @@ def config_valide(config):
     if alim["puissance_w"] < seuil:
       return False, "Puissance de l'alimentation insuffisante."
   return True, None
+
+def rechercher(type_, texte):
+  """Recherche des composants par nom pour l'autocomplétion (20 max).
+
+  **Reçoit :** `type_` (`"gpu"`), `texte` (`"4070"`).
+  **Renvoie :** liste de dicts `[{"id", "nom", "prix"}]`.
+  **Exemple :** `rechercher("gpu", "4070")` -> `[{"id": 5521, "nom": "MSI RTX
+  4070", "prix": 549}]`.
+  """
+  return query(
+      "SELECT id, nom, prix FROM composant WHERE type = %s AND nom ILIKE %s"
+      " ORDER BY nom LIMIT 20",
+      (type_, f"%{texte}%"),
+  )
