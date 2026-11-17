@@ -11,6 +11,9 @@ Les versions suivent la numérotation MAJEUR.MINEUR.CORRECTIF (Semantic Versioni
 - Page de saisie de la recommandation et envoi de la demande à l'API.
 - Squelette frontend Vue avec Vite, affichage de la page de saisie et commandes de lancement documentées.
 
+### Ajouté
+- Page de saisie de la recommandation et envoi de la demande à l'API.
+
 ## [0.1.0] · 2026-11-18
 
 Première version fonctionnelle, non optimisée (point de départ des mesures).
