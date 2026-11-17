@@ -333,11 +333,13 @@ def classer(candidats, entree, top=10):
     4070 Ventus, et `{"usage": "jeu"}`.
 
     **Renvoie :** au plus `top` dictionnaires triés par score décroissant, avec le
-    score total et le détail des règles. Une RTX 4070 peut ainsi apparaître avec
-    son prix, son score et son score `perf_prix`.
+    score total, le détail des règles et les caractéristiques connues de la pièce.
+    Une RTX 4070 peut ainsi apparaître avec son prix, son score, son score
+    `perf_prix` et ses caractéristiques comme son chipset.
 
-    **Complexité :** O(n × c + n log n), n = candidats, c = composants sélectionnés,
-    avec une requête SQL par identifiant sélectionné.
+    **Complexité :** O(n × c + n log n + n × f), n = candidats, c = composants
+    sélectionnés et f = nombre de caractéristiques de chaque pièce, avec une requête
+    SQL par identifiant sélectionné.
     """
     poids = POIDS.get(entree["usage"], POIDS["jeu"])
     resultats = []
@@ -352,9 +354,17 @@ def classer(candidats, entree, top=10):
             "budget": regle_budget(piece, entree_avec_fiches),
         }
         score = sum(poids[k] * v for k, v in detail.items())
+        # Choix : renvoyer les caractéristiques non vides dans un champ dédié permet
+        # à l'interface de les afficher sans changer les champs déjà utilisés par elle.
+        caracteristiques = {}
+        for nom_champ, valeur in piece.items():
+            if nom_champ not in ("id", "nom", "prix") and valeur is not None:
+                caracteristiques[nom_champ] = valeur
+
         resultats.append({
             "id": piece["id"], "nom": piece["nom"], "prix": piece.get("prix"),
             "score": round(score, 3), "detail": detail,
+            "caracteristiques": caracteristiques,
         })
     resultats.sort(key=obtenir_score, reverse=True)
     return resultats[:top]
