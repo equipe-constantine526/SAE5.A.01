@@ -109,3 +109,11 @@ Modèle :
 - **Alternatives écartées :** ajouter un routeur et une page d'accueil avant que les autres pages soient intégrées.
 - **Pourquoi :** le formulaire de saisie est la page déjà disponible ; le démarrer directement permet de vérifier le frontend sans ajouter de navigation hors du périmètre du squelette.
 - **Conséquences :** `npm run dev` démarre l'interface sur le port 5173 et `npm run build` vérifie sa compilation. Une navigation entre plusieurs pages pourra être ajoutée quand les vues seront prêtes.
+
+## D-14 · Relier la saisie à la page de résultats dans `App.vue`
+
+- **Date :** 2026-11-17
+- **Décision :** `App.vue` écoute l'événement `recommandation` de `Saisie.vue`, transmet la liste reçue à `Resultats.vue`, et permet de revenir au formulaire.
+- **Alternatives écartées :** ajouter Vue Router pour ce passage entre les deux vues.
+- **Pourquoi :** le parcours actuel ne comporte que la saisie et les résultats ; le composant racine peut gérer ce changement d'affichage sans ajouter de dépendance.
+- **Conséquences :** les choix du formulaire restent restaurables depuis `localStorage` après le retour. Si le nombre de vues augmente, il faudra réévaluer le besoin d'un routeur.
