@@ -1,4 +1,4 @@
-﻿"""Tests des règles du score de contenu. Responsable : B1 (tâches 15 à 17).
+﻿"""Tests des règles du score de contenu. Responsable : B1 (tâches 15 à 18).
 
 Les exemples de prix sont synthétiques ; en production, prix et budget sont en
 dollars comme dans le catalogue (`models/schema.sql`).
@@ -6,9 +6,11 @@ dollars comme dans le catalogue (`models/schema.sql`).
 
 import sys
 from types import ModuleType
+from unittest.mock import Mock
 
 import pytest
 
+import services.score_contenu as score_contenu
 from services.score_contenu import (
     classer,
     composants_selectionnes,
@@ -64,6 +66,37 @@ def test_classement_place_le_meilleur_rapport_en_premier():
     assert resultats[0]["id"] == PIECE_A["id"]
     assert resultats[0]["detail"]["perf_prix"] == pytest.approx(1.0)
     assert resultats[1]["detail"]["perf_prix"] == pytest.approx(0.10 / 0.14)
+
+
+@pytest.mark.parametrize(
+    ("usage", "score_attendu"),
+    [
+        ("jeu", 0.58),
+        ("montage", 0.52),
+        ("bureautique", 0.44),
+    ],
+)
+def test_classement_applique_les_poids_selon_l_usage(
+    monkeypatch, usage, score_attendu
+):
+    """Vérifie que le score final utilise les poids de l'usage demandé.
+
+    **Reçoit :** un candidat et un usage parmi jeu, montage et bureautique ; les
+    règles renvoient des notes fixes pour isoler la pondération.
+    **Renvoie :** aucune valeur ; vérifie le score final calculé avec les poids.
+    **Exemple :** en jeu, `0.8 × 0.4 + 0.6 × 0.3 + 0.4 × 0.1 + 0.2 × 0.2 = 0.58`.
+    """
+    monkeypatch.setattr(
+        score_contenu, "normaliser_perf_prix", Mock(return_value=[0.8])
+    )
+    monkeypatch.setattr(score_contenu, "regle_equilibre", Mock(return_value=0.6))
+    monkeypatch.setattr(score_contenu, "regle_alim", Mock(return_value=0.4))
+    monkeypatch.setattr(score_contenu, "regle_budget", Mock(return_value=0.2))
+    candidat = {"id": 99, "nom": "Pièce exemple", "prix": 500}
+
+    resultats = classer([candidat], {"usage": usage, "composants": []})
+
+    assert resultats[0]["score"] == pytest.approx(score_attendu)
 
 
 def test_regle_equilibre_note_haut_pour_jeu_equilibre():
