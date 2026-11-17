@@ -12,6 +12,7 @@ Les versions suivent la numérotation MAJEUR.MINEUR.CORRECTIF (Semantic Versioni
 - Squelette frontend Vue avec Vite, affichage de la page de saisie et commandes de lancement documentées.
 - Affichage des résultats après la réponse de recommandation, avec retour au formulaire.
 - Réutilisation du composant partagé de recherche de composants dans la page de saisie.
+- Refonte visuelle de la saisie : panneau de marque, photo fondue au-dessus du formulaire et icônes des composants sélectionnés.
 
 ### Ajouté
 - Page de saisie de la recommandation et envoi de la demande à l'API.
