@@ -117,3 +117,11 @@ Modèle :
 - **Alternatives écartées :** ajouter Vue Router pour ce passage entre les deux vues.
 - **Pourquoi :** le parcours actuel ne comporte que la saisie et les résultats ; le composant racine peut gérer ce changement d'affichage sans ajouter de dépendance.
 - **Conséquences :** les choix du formulaire restent restaurables depuis `localStorage` après le retour. Si le nombre de vues augmente, il faudra réévaluer le besoin d'un routeur.
+
+## D-15 · Réutiliser `RechercheComposant.vue` dans la saisie
+
+- **Date :** 2026-11-17
+- **Décision :** la page `Saisie.vue` délègue l'autocomplétion à `RechercheComposant.vue` et conserve la liste des pièces sélectionnées.
+- **Alternatives écartées :** maintenir une deuxième recherche et une deuxième liste de suggestions dans la page de saisie.
+- **Pourquoi :** le composant partagé gère déjà le délai de recherche, les suggestions, l'annulation des anciennes requêtes et la navigation au clavier.
+- **Conséquences :** `Saisie.vue` reçoit la pièce via l'événement `select`, lui associe le type choisi et évite les doublons avant de l'ajouter à la configuration.

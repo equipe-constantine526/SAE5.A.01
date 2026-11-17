@@ -1,6 +1,7 @@
 <!-- Page d'entrée de la recommandation. Responsable : A1 · Tâche 11. -->
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import RechercheComposant from '../components/RechercheComposant.vue'
 
 const emit = defineEmits(['recommandation'])
 
@@ -26,17 +27,11 @@ const budget = ref(1200)
 const usage = ref('jeu')
 const typeCherche = ref('gpu')
 const typeRecherche = ref('cpu')
-const texteRecherche = ref('')
 const composants = ref([])
-const suggestions = ref([])
-const rechercheEnCours = ref(false)
 const envoiEnCours = ref(false)
-const erreurRecherche = ref('')
 const erreurEnvoi = ref('')
 const erreurSauvegarde = ref('')
 const message = ref('')
-
-let temporisateurRecherche
 
 const formulaireValide = computed(() => Number(budget.value) > 0 && usage.value && typeCherche.value)
 
@@ -119,58 +114,6 @@ function enregistrerSaisie() {
 watch([budget, usage, typeCherche, composants], enregistrerSaisie, { deep: true })
 onMounted(restaurerSaisie)
 
-// Choix temporaire : garder la recherche dans cette page jusqu'à l'arrivée du composant partagé A2.
-// Il faudra le réutiliser ici et dans Ajouter ma config pour éviter deux recherches distinctes.
-/**
- * Attend une courte pause de frappe avant de rechercher un composant.
- * @returns {void}
- * @example planifierRecherche() après la saisie de « 4070 » programme une recherche après 300 ms.
- */
-function planifierRecherche() {
-  clearTimeout(temporisateurRecherche)
-  erreurRecherche.value = ''
-  message.value = ''
-
-  if (texteRecherche.value.trim().length === 0) {
-    suggestions.value = []
-    return
-  }
-
-  // Choix : attendre les 300 ms prévus par le guide plutôt que d'appeler l'API à chaque frappe.
-  temporisateurRecherche = setTimeout(rechercherComposants, 300)
-}
-
-/**
- * Cherche les composants correspondant au texte dans le catalogue.
- * Le type et le texte proviennent des champs du formulaire.
- * @returns {Promise<void>} Met à jour les suggestions ou le message d'erreur.
- * @example rechercherComposants() affiche les cartes graphiques retournées pour « 4070 ».
- */
-async function rechercherComposants() {
-  rechercheEnCours.value = true
-  erreurRecherche.value = ''
-
-  const parametres = new URLSearchParams({
-    type: typeRecherche.value,
-    q: texteRecherche.value.trim(),
-  })
-
-  try {
-    const reponse = await fetch(`${adresseApi}/api/composants?${parametres}`)
-    if (!reponse.ok) {
-      throw new Error('La recherche de composants sera disponible après l’intégration de l’API.')
-    }
-
-    const resultat = await reponse.json()
-    suggestions.value = Array.isArray(resultat) ? resultat : []
-  } catch (erreur) {
-    suggestions.value = []
-    erreurRecherche.value = erreur.message || 'Impossible de joindre le catalogue.'
-  } finally {
-    rechercheEnCours.value = false
-  }
-}
-
 /**
  * Ajoute au formulaire la suggestion choisie par l'utilisateur.
  * @param {Object} composant Composant de l'API, ex. { id: 412, nom: "AMD Ryzen 5 7600", prix: 199 }.
@@ -180,12 +123,9 @@ async function rechercherComposants() {
 function ajouterComposant(composant) {
   const dejaAjoute = composants.value.some((element) => element.id === composant.id)
   if (!dejaAjoute) {
+    // Choix : le parent ajoute le type sélectionné, car l'API renvoie la fiche sans type de recherche.
     composants.value.push({ ...composant, type: typeRecherche.value })
   }
-
-  texteRecherche.value = ''
-  suggestions.value = []
-  erreurRecherche.value = ''
 }
 
 /**
@@ -238,16 +178,6 @@ async function envoyerRecommandation() {
   }
 }
 
-/**
- * Annule une recherche différée si l'utilisateur quitte la page.
- * @returns {void}
- * @example nettoyerRecherche() annule le minuteur programmé après « 4070 ».
- */
-function nettoyerRecherche() {
-  clearTimeout(temporisateurRecherche)
-}
-
-onBeforeUnmount(nettoyerRecherche)
 </script>
 
 <template>
@@ -294,33 +224,17 @@ onBeforeUnmount(nettoyerRecherche)
         <p class="aide">Vous pouvez continuer sans en ajouter si vous partez de zéro.</p>
 
         <label for="type-composant">Type de composant</label>
-        <select id="type-composant" v-model="typeRecherche" @change="planifierRecherche">
+        <select id="type-composant" v-model="typeRecherche">
           <option v-for="type in typesComposants" :key="type.valeur" :value="type.valeur">
             {{ type.libelle }}
           </option>
         </select>
 
-        <label for="recherche-composant">Rechercher dans le catalogue</label>
-        <input
-          id="recherche-composant"
-          v-model="texteRecherche"
-          type="search"
-          autocomplete="off"
-          placeholder="Ex. Ryzen 5 7600 ou RTX 4070"
-          @input="planifierRecherche"
+        <p class="libelle-recherche">Rechercher dans le catalogue</p>
+        <RechercheComposant
+          :type="typeRecherche"
+          @select="ajouterComposant"
         />
-
-        <p v-if="rechercheEnCours" class="etat" role="status">Recherche en cours…</p>
-        <p v-if="erreurRecherche" class="erreur" role="alert">{{ erreurRecherche }}</p>
-
-        <ul v-if="suggestions.length" class="suggestions" aria-label="Suggestions de composants">
-          <li v-for="suggestion in suggestions" :key="suggestion.id">
-            <button type="button" @click="ajouterComposant(suggestion)">
-              <span>{{ suggestion.nom }}</span>
-              <span>{{ suggestion.prix == null ? 'Prix inconnu' : `${suggestion.prix} $` }}</span>
-            </button>
-          </li>
-        </ul>
 
         <ul v-if="composants.length" class="composants-selectionnes" aria-label="Composants sélectionnés">
           <li v-for="composant in composants" :key="composant.id">
@@ -412,6 +326,12 @@ h2 {
   margin-bottom: 0.25rem;
 }
 
+.libelle-recherche {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
 label {
   margin-top: 0.35rem;
   font-size: 0.92rem;
@@ -437,7 +357,6 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-.suggestions,
 .composants-selectionnes {
   display: grid;
   gap: 0.4rem;
@@ -446,7 +365,6 @@ button:focus-visible {
   list-style: none;
 }
 
-.suggestions button,
 .composants-selectionnes li {
   display: flex;
   width: 100%;
@@ -459,16 +377,6 @@ button:focus-visible {
   background: #f8fafb;
   color: inherit;
   text-align: left;
-}
-
-.suggestions button {
-  cursor: pointer;
-  font: inherit;
-}
-
-.suggestions button:hover {
-  border-color: #386b5b;
-  background: #eef7f2;
 }
 
 .composants-selectionnes li button {
