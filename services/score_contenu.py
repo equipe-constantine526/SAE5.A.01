@@ -11,18 +11,22 @@ POIDS = {
     "bureautique": {"perf_prix": 0.3, "equilibre": 0.1, "alim": 0.1, "budget": 0.5},
 }
 
+# Le guide ne fixe qu'une part précise : 40 % du budget pour le GPU en jeu.
+# Les autres couples usage/type utilisent le budget entier jusqu'à décision de l'équipe.
+PART_BUDGET_PAR_USAGE = {"jeu": {"gpu": 0.4}}
+
 
 def ratio_perf_prix(piece):
     """Calcule la performance par dollar, ou zéro si les données sont inutilisables.
 
-    **Reçoit :** `piece`, une fiche de composant avec `perf` et `prix`,
-    par exemple `{"nom": "MSI GeForce RTX 4070 Ventus", "perf": 29.15, "prix": 549}`.
+    **Reçoit :** `piece`, une fiche de composant du catalogue avec `perf` et `prix`,
+    par exemple `{"type": "gpu", "perf": 80, "prix": 549}`.
 
     **Renvoie :** un nombre positif ou `0.0` si la performance ou le prix manque,
     si le prix n'est pas positif, ou si une valeur n'est pas finie.
 
-    **Exemple :** avec les valeurs illustratives du guide pour la MSI GeForce RTX 4070
-    Ventus, `29.15 / 549` donne environ `0.053` point par dollar.
+    **Exemple :** pour une fiche de catalogue avec `perf=80` et `prix=549`, le rapport
+    est `80 / 549`, soit environ `0.146` point d'indice par dollar.
 
     **Complexité :** O(1).
     """
@@ -46,7 +50,7 @@ def normaliser_perf_prix(candidats):
     """Renvoie les rapports performance/prix normalisés dans l'ordre des candidats.
 
     **Reçoit :** les fiches des pièces compatibles, par exemple une liste contenant
-    la MSI GeForce RTX 4070 Ventus (`perf=29.15`, `prix=549` dans l'exemple du guide).
+    une carte graphique avec `perf=80` et `prix=549` (valeurs d'exemple).
 
     **Renvoie :** une liste de scores entre 0 et 1, dans le même ordre que `candidats`.
     Le meilleur rapport reçoit 1.0. Si aucun rapport n'est valide, tous les scores
@@ -77,8 +81,8 @@ def regle_perf_prix(piece, candidats):
     """Note le rapport performance/prix d'une pièce parmi les pièces compatibles.
 
     **Reçoit :** `piece`, la fiche à noter, et `candidats`, les fiches compatibles.
-    Exemple : la MSI GeForce RTX 4070 Ventus avec `perf=29.15` et `prix=549`, parmi
-    les cartes graphiques compatibles (valeurs illustratives reprises du guide).
+    Exemple : une carte graphique avec `perf=80` et `prix=549`, parmi les cartes
+    graphiques compatibles (valeurs d'exemple).
 
     **Renvoie :** un score compris entre 0 et 1. Le meilleur rapport vaut 1.
 
@@ -95,21 +99,68 @@ def regle_perf_prix(piece, candidats):
     return ratio_perf_prix(piece) / meilleur_ratio
 
 
+def composants_selectionnes(entree):
+    """Charge les fiches catalogue des composants déjà choisis.
+
+    **Reçoit :** `entree` avec `composants`, une liste d'identifiants envoyés par
+    l'API ou de fiches déjà chargées, par exemple `[412]` ou
+    `[{"id": 412, "type": "cpu"}]`.
+
+    **Renvoie :** les fiches avec les champs du catalogue utilisés par les règles,
+    notamment `id`, `type`, `perf`, `alim_conseillee_w` et `puissance_w`.
+
+    **Exemple :** l'identifiant `[412]` devient la fiche du processeur 412 avec son
+    type et son indice de performance.
+
+    **Complexité :** O(c), c = nombre de composants sélectionnés, plus une requête
+    SQL par identifiant qui n'a pas déjà sa fiche.
+    """
+    composants = entree.get("composants") or []
+    fiches = []
+    identifiants = []
+
+    for composant in composants:
+        if isinstance(composant, dict):
+            fiches.append(composant)
+        else:
+            identifiants.append(composant)
+
+    if identifiants:
+        from models.db import query
+
+        # OPTI (P-02) : on lit maintenant chaque composant sélectionné avec une
+        # requête SQL séparée. Une requête groupée avec WHERE id = ANY(%s) éviterait
+        # ces allers-retours ; on garde cette version simple comme référence avant
+        # mesure de l'optimisation.
+        for identifiant in identifiants:
+            fiches_catalogue = query(
+                """SELECT id, type, perf, alim_conseillee_w, puissance_w
+                   FROM composant WHERE id = %s""",
+                (identifiant,),
+            )
+            if fiches_catalogue:
+                fiches.append(fiches_catalogue[0])
+
+    return fiches
+
+
 def regle_equilibre(piece, entree):
-    """Renvoie une note entre 0 et 1 selon l'équilibre CPU/GPU d'une pièce candidate.
+    """Note l'équilibre CPU/GPU selon l'usage et l'indice catalogue `perf`.
 
     **Reçoit :**
     - `piece` : une pièce candidate, ex. {"id": 501, "type": "gpu", "perf": 75.0}
     - `entree` : la requête utilisateur avec les composants déjà sélectionnés,
-      ex. {"composants": [{"type": "cpu", "perf": 80.0}]}
+      sous forme d'identifiants ou de fiches, ex. {"composants": [412]}.
 
-    **Renvoie :** une note proche de 1 quand la pièce est bien équilibrée avec la
-    pièce de l'autre type déjà présente, ex. 0.9375 pour un GPU 75 avec un CPU 80.
+    **Renvoie :** une note entre 0 et 1. Un écart reste pénalisé, mais moins quand
+    le composant le plus performant correspond à l'usage : GPU pour le jeu, CPU
+    pour le montage vidéo.
 
-    **Exemple :** `regle_equilibre({"type": "gpu", "perf": 75.0}, {"composants": [{"type": "cpu", "perf": 80.0}]})`
-    renvoie 0.9375.
+    **Exemple :** avec un CPU à 40 et un GPU à 95, l'écart vaut `(95 - 40) / 100`,
+    soit `0.55`. La note est `0.725` en jeu et `0.45` en montage vidéo.
 
-    **Complexité :** O(c), c = nombre de composants déjà présents dans la config.
+    **Complexité :** O(c), c = composants déjà présents, plus une requête SQL par
+    identifiant si l'entrée contient des identifiants.
     """
     piece_type = piece.get("type")
     piece_perf = piece.get("perf")
@@ -117,7 +168,7 @@ def regle_equilibre(piece, entree):
     if piece_perf is None:
         return 0.5
 
-    composants = entree.get("composants", [])
+    composants = composants_selectionnes(entree)
     reference = None
 
     if piece_type == "gpu":
@@ -128,21 +179,127 @@ def regle_equilibre(piece, entree):
     if reference in (None, 0):
         return 0.5
 
-    # Choix : on compare la performance de la pièce à celle de son complémentaire déjà
-    # présent dans la config. Une paire CPU/GPU équilibrée a un ratio proche de 1 ;
-    # si l'un des deux est trop loin de l'autre, la note baisse progressivement.
-    ratio = piece_perf / reference
-    return max(0.0, min(1.0, 1.0 - abs(ratio - 1.0)))
+    if piece_type == "gpu":
+        performance_gpu = piece_perf
+        performance_cpu = reference
+    else:
+        performance_gpu = reference
+        performance_cpu = piece_perf
+
+    ecart = (performance_gpu - performance_cpu) / 100
+    usage = entree.get("usage", "jeu")
+    gpu_plus_performant = ecart > 0
+
+    # Choix : le guide indique quel composant peut être plus performant selon
+    # l'usage, mais ne donne pas de formule. On garde une pénalité pour l'écart
+    # (exemple CPU 40/GPU 95), réduite de moitié dans le sens favorisé par l'usage.
+    if usage == "jeu" and gpu_plus_performant:
+        coefficient_penalite = 0.5
+    elif usage == "montage" and not gpu_plus_performant:
+        coefficient_penalite = 0.5
+    else:
+        coefficient_penalite = 1.0
+
+    penalite = abs(ecart) * coefficient_penalite
+    return max(0.0, 1.0 - penalite)
 
 
 def regle_alim(piece, entree):
-    # TODO B1 (tâche 17)
-    return 0.0
+    """Note la marge entre la puissance d'alimentation et la puissance conseillée.
+
+    **Reçoit :** `piece`, une alimentation candidate ou un GPU candidat ; `entree`,
+    avec les composants déjà choisis. Exemple : une alimentation de 650 W et une
+    « Fausse RTX » nécessitant 550 W.
+
+    **Renvoie :** une note entre 0 et 1. Une marge de 50 à 150 W vaut 1 ; une marge
+    négative vaut 0. Renvoie 0.5 si la pièce ou sa puissance de référence manque.
+
+    **Exemple :** 650 W face à 550 W donne une marge de 100 W et un score de `1.0`.
+
+    **Complexité :** O(c), c = composants déjà choisis, plus une requête SQL par
+    identifiant si l'entrée contient des identifiants.
+    """
+    composants = composants_selectionnes(entree)
+    type_piece = piece.get("type")
+    puissance_alim = None
+    puissance_conseillee = None
+
+    if type_piece == "alim":
+        puissance_alim = piece.get("puissance_w")
+        for composant in composants:
+            if composant.get("type") == "gpu":
+                puissance_conseillee = composant.get("alim_conseillee_w")
+                break
+    elif type_piece == "gpu":
+        puissance_conseillee = piece.get("alim_conseillee_w")
+        for composant in composants:
+            if composant.get("type") == "alim":
+                puissance_alim = composant.get("puissance_w")
+                break
+    else:
+        return 0.5
+
+    try:
+        puissance_alim = float(puissance_alim)
+        puissance_conseillee = float(puissance_conseillee)
+    except (TypeError, ValueError):
+        return 0.5
+
+    if not math.isfinite(puissance_alim) or not math.isfinite(puissance_conseillee):
+        return 0.5
+    if puissance_alim <= 0 or puissance_conseillee <= 0:
+        return 0.5
+
+    marge = puissance_alim - puissance_conseillee
+    if marge < 0:
+        return 0.0
+
+    # Choix : le guide donne une zone idéale de 50 à 150 W, sans formule exacte.
+    # On augmente linéairement jusqu'à 50 W puis on baisse comme 150 / marge au-delà.
+    if marge < 50:
+        return marge / 50
+    if marge <= 150:
+        return 1.0
+    return 150 / marge
 
 
 def regle_budget(piece, entree):
-    # TODO B1 (tâche 17)
-    return 0.0
+    """Note le prix d'une pièce par rapport à la part prévue du budget.
+
+    **Reçoit :** `piece`, une fiche avec `type` et `prix` ; `entree`, contenant
+    `budget` en dollars et `usage`. Le catalogue stocke `prix` en dollars.
+
+    **Renvoie :** une note entre 0 et 1. Le score vaut 1 sous la part prévue et
+    diminue selon le rapport entre cette part et le prix si elle est dépassée.
+    Les parts non précisées par le guide utilisent le budget entier, sans inventer
+    de pourcentage.
+
+    **Exemple :** avec un budget de 1 200 $ et un GPU à 700 $, la part de 40 % vaut
+    480 $ ; le score vaut `480 / 700`, soit environ `0.686`.
+
+    **Complexité :** O(1).
+    """
+    try:
+        prix = float(piece.get("prix"))
+        budget = float(entree.get("budget"))
+    except (TypeError, ValueError):
+        return 0.0
+
+    # Choix : si le prix ou le budget manque, le score vaut zéro car on ne peut pas
+    # vérifier que la pièce respecte la limite prévue.
+    if not math.isfinite(prix) or not math.isfinite(budget):
+        return 0.0
+    if prix < 0 or budget <= 0:
+        return 0.0
+
+    usage = entree.get("usage", "jeu")
+    type_piece = piece.get("type")
+    part = PART_BUDGET_PAR_USAGE.get(usage, {}).get(type_piece, 1.0)
+    budget_piece = budget * part
+
+    if prix <= budget_piece:
+        return 1.0
+    return budget_piece / prix
 
 
 def classer(candidats, entree, top=10):
@@ -157,17 +314,20 @@ def classer(candidats, entree, top=10):
     score total et le détail des règles. Une RTX 4070 peut ainsi apparaître avec
     son prix, son score et son score `perf_prix`.
 
-    **Complexité :** O(n log n), n = nombre de candidats, à cause du tri final.
+    **Complexité :** O(n × c + n log n), n = candidats, c = composants sélectionnés,
+    avec une requête SQL par identifiant sélectionné.
     """
     poids = POIDS.get(entree["usage"], POIDS["jeu"])
     resultats = []
+    entree_avec_fiches = entree.copy()
+    entree_avec_fiches["composants"] = composants_selectionnes(entree)
     scores_perf_prix = normaliser_perf_prix(candidats)
     for index, piece in enumerate(candidats):
         detail = {
             "perf_prix": scores_perf_prix[index],
-            "equilibre": regle_equilibre(piece, entree),
-            "alim": regle_alim(piece, entree),
-            "budget": regle_budget(piece, entree),
+            "equilibre": regle_equilibre(piece, entree_avec_fiches),
+            "alim": regle_alim(piece, entree_avec_fiches),
+            "budget": regle_budget(piece, entree_avec_fiches),
         }
         score = sum(poids[k] * v for k, v in detail.items())
         resultats.append({
