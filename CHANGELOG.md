@@ -5,7 +5,11 @@ Les versions suivent la numérotation MAJEUR.MINEUR.CORRECTIF (Semantic Versioni
 
 ## [Non publié]
 
-<!-- Ce qui est mergé dans main mais pas encore dans une version taggée. -->
+<!-- Ce qui sera inclus dans la prochaine version. -->
+
+### Ajouté
+- Page de saisie de la recommandation et envoi de la demande à l'API.
+- Squelette frontend Vue avec Vite, affichage de la page de saisie et commandes de lancement documentées.
 
 ### Ajouté
 - Page de saisie de la recommandation et envoi de la demande à l'API.

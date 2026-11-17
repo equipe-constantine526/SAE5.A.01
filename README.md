@@ -1,6 +1,6 @@
-# RigMatch : backend
+# RigMatch
 
-API Flask du projet. Le frontend Vue est dans un dépôt ou un dossier séparé et ne communique qu'avec cette API.
+Application de recommandation de composants PC : API Flask et frontend Vue. Le frontend communique uniquement avec l'API.
 
 ## Installation
 
@@ -27,6 +27,18 @@ python app.py
 ```
 
 Vérifier : http://localhost:5000/api/health doit renvoyer `{"status": "ok"}`.
+
+## Frontend
+
+Installer Node.js, puis installer les dépendances et démarrer Vue :
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Ouvrir http://localhost:5173. Pour utiliser les appels à l'API, laisser Flask démarré dans un autre terminal.
 
 ## Organisation
 
