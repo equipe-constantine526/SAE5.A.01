@@ -96,8 +96,43 @@ def regle_perf_prix(piece, candidats):
 
 
 def regle_equilibre(piece, entree):
-    # TODO B1 (tâche 16)
-    return 0.0
+    """Renvoie une note entre 0 et 1 selon l'équilibre CPU/GPU d'une pièce candidate.
+
+    **Reçoit :**
+    - `piece` : une pièce candidate, ex. {"id": 501, "type": "gpu", "perf": 75.0}
+    - `entree` : la requête utilisateur avec les composants déjà sélectionnés,
+      ex. {"composants": [{"type": "cpu", "perf": 80.0}]}
+
+    **Renvoie :** une note proche de 1 quand la pièce est bien équilibrée avec la
+    pièce de l'autre type déjà présente, ex. 0.9375 pour un GPU 75 avec un CPU 80.
+
+    **Exemple :** `regle_equilibre({"type": "gpu", "perf": 75.0}, {"composants": [{"type": "cpu", "perf": 80.0}]})`
+    renvoie 0.9375.
+
+    **Complexité :** O(c), c = nombre de composants déjà présents dans la config.
+    """
+    piece_type = piece.get("type")
+    piece_perf = piece.get("perf")
+
+    if piece_perf is None:
+        return 0.5
+
+    composants = entree.get("composants", [])
+    reference = None
+
+    if piece_type == "gpu":
+        reference = next((c.get("perf") for c in composants if c.get("type") == "cpu"), None)
+    elif piece_type == "cpu":
+        reference = next((c.get("perf") for c in composants if c.get("type") == "gpu"), None)
+
+    if reference in (None, 0):
+        return 0.5
+
+    # Choix : on compare la performance de la pièce à celle de son complémentaire déjà
+    # présent dans la config. Une paire CPU/GPU équilibrée a un ratio proche de 1 ;
+    # si l'un des deux est trop loin de l'autre, la note baisse progressivement.
+    ratio = piece_perf / reference
+    return max(0.0, min(1.0, 1.0 - abs(ratio - 1.0)))
 
 
 def regle_alim(piece, entree):
