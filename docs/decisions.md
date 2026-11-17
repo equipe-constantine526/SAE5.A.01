@@ -101,3 +101,11 @@ Modèle :
 - **Date :** novembre 2026, après le retour de l'enseignant
 - **Décision :** requêtes SQL paramétrées et filtre de compatibilité côté backend, rien de plus pour l'instant.
 - **Pourquoi :** l'enseignant a précisé que la sécurité n'est pas ce qui est évalué dans la SAÉ.
+
+## D-13 · Lancer le frontend Vue avec Vite
+
+- **Date :** 2026-11-17
+- **Décision :** utiliser Vite pour lancer et construire le frontend Vue ; `App.vue` affiche directement la page `Saisie.vue` comme première page de l'application.
+- **Alternatives écartées :** ajouter un routeur et une page d'accueil avant que les autres pages soient intégrées.
+- **Pourquoi :** le formulaire de saisie est la page déjà disponible ; le démarrer directement permet de vérifier le frontend sans ajouter de navigation hors du périmètre du squelette.
+- **Conséquences :** `npm run dev` démarre l'interface sur le port 5173 et `npm run build` vérifie sa compilation. Une navigation entre plusieurs pages pourra être ajoutée quand les vues seront prêtes.
