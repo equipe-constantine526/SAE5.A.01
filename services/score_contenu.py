@@ -5,6 +5,13 @@ Responsable : B1 · Tâches 15 à 18
 
 import math
 
+# Choix : les poids sont des priorités choisies pour le projet, pas des valeurs
+# mesurées. En jeu, on met l'accent sur le rapport perf/prix et l'équilibre ; en
+# montage, le budget pèse davantage, tandis que l'équilibre favorise déjà le CPU
+# dans sa propre règle. En bureautique, le budget devient prioritaire car le besoin
+# de performance est plus limité. L'alimentation garde 10 % partout : la compatibilité
+# vérifie déjà qu'elle est suffisante. Chaque ligne totalise 1 pour garder le score
+# final entre 0 et 1.
 POIDS = {
     "jeu":       {"perf_prix": 0.4, "equilibre": 0.3, "alim": 0.1, "budget": 0.2},
     "montage":   {"perf_prix": 0.3, "equilibre": 0.3, "alim": 0.1, "budget": 0.3},
@@ -302,6 +309,21 @@ def regle_budget(piece, entree):
     return budget_piece / prix
 
 
+def obtenir_score(resultat):
+    """Renvoie le score d'un résultat pour le tri des recommandations.
+
+    **Reçoit :** un dictionnaire de résultat, par exemple `{"nom": "RTX 4070",
+    "score": 0.87}`.
+
+    **Renvoie :** le score numérique du résultat, ici `0.87`.
+
+    **Exemple :** `obtenir_score({"score": 0.87})` renvoie `0.87`.
+
+    **Complexité :** O(1).
+    """
+    return resultat["score"]
+
+
 def classer(candidats, entree, top=10):
     """Classe les candidats selon les règles et les poids liés à l'usage.
 
@@ -334,5 +356,5 @@ def classer(candidats, entree, top=10):
             "id": piece["id"], "nom": piece["nom"], "prix": piece.get("prix"),
             "score": round(score, 3), "detail": detail,
         })
-    resultats.sort(key=lambda r: r["score"], reverse=True)
+    resultats.sort(key=obtenir_score, reverse=True)
     return resultats[:top]
