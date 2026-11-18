@@ -149,3 +149,11 @@ Modèle :
 - **Alternative écartée :** afficher plusieurs références presque identiques d'une même puce, ce qui masque les autres choix disponibles.
 - **Pourquoi :** le catalogue contient de nombreuses variantes d'un GPU ; dans un essai, 7 des 10 premiers résultats étaient des RX 9060 XT.
 - **Conséquences :** la liste montre des composants plus différents, mais peut contenir moins de 10 résultats si le catalogue offre moins de 10 chipsets compatibles.
+
+## D-21 · Séparer la licence du code et celles des ressources tierces
+
+- Date : 2026-11-18
+- Décision : placer le code produit par l'équipe sous licence MIT et conserver les licences et attributions propres aux catalogues et à la photo dans THIRD_PARTY_NOTICES.md.
+- Alternatives écartées : appliquer une licence unique à tout le dépôt, ce qui attribuerait à tort les ressources tierces à l'équipe.
+- Pourquoi : MIT est courte et permet la réutilisation du code avec conservation de la notice ; les catalogues et l'image ont des conditions différentes.
+- Conséquences : la licence racine ne couvre pas data/ ni pcbuild.jpg ; leurs notices doivent rester avec les fichiers lors de toute redistribution.
