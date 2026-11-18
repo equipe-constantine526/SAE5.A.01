@@ -17,6 +17,9 @@ Les versions suivent la numérotation MAJEUR.MINEUR.CORRECTIF (Semantic Versioni
 - Indice de performance CPU estimé à partir de la fréquence de base lorsque la fréquence boost manque dans le catalogue.
 - Classement des composants sans indice de performance selon leur coût relatif au budget.
 - Liste de recommandations diversifiée : une seule variante par chipset ou famille.
+- Page des résultats harmonisée avec la charte RigMatch et palette centralisée en variables CSS.
+- Détail du composant et configuration possédée affichés dans les résultats, avec indices arrondis à deux décimales.
+- La saisie bloque comme cible un type de composant déjà indiqué comme possédé.
 
 ### Ajouté
 - Page de saisie de la recommandation et envoi de la demande à l'API.

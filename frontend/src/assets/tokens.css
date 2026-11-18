@@ -1,0 +1,33 @@
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4
+ * Hallmark · genre: modern-minimal · tone: technique rassurante · anchor hue: bordeaux
+ * Structural fingerprint: Split Workbench · shared design tokens for the Vue app
+ */
+:root {
+  --color-bordeaux: #200c0c;
+  --color-bordeaux-hover: #351714;
+  --color-citron: #d5fb91;
+  --color-orange: #f08a31;
+  --color-orange-ink: #29170f;
+  --color-papier: #fbf9f5;
+  --color-surface: #fffdf9;
+  --color-encre: #281f1c;
+  --color-encre-douce: #6e625c;
+  --color-texte-sombre: #f2e8df;
+  --color-texte-sombre-doux: #d2bdb1;
+  --color-regle: #e7dcd2;
+  --color-regle-sombre: rgb(255 255 255 / 18%);
+  --color-focus: #ad4c1d;
+  --color-erreur: #a3332d;
+  --color-desactive: #d2cbc4;
+  --color-encre-desactive: #453b36;
+  --font-display: "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-body: "Segoe UI", "Trebuchet MS", sans-serif;
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4rem;
+  --radius-card: 0.4rem;
+  --radius-input: 0.35rem;
+}
