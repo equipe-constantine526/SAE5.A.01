@@ -125,3 +125,27 @@ Modèle :
 - **Alternatives écartées :** maintenir une deuxième recherche et une deuxième liste de suggestions dans la page de saisie.
 - **Pourquoi :** le composant partagé gère déjà le délai de recherche, les suggestions, l'annulation des anciennes requêtes et la navigation au clavier.
 - **Conséquences :** `Saisie.vue` reçoit la pièce via l'événement `select`, lui associe le type choisi et évite les doublons avant de l'ajouter à la configuration.
+
+## D-16 · Estimer la performance CPU si la fréquence boost manque
+
+- **Date :** 2026-11-18
+- **Décision :** utiliser la fréquence de base pour calculer un indice CPU lorsque le catalogue ne fournit pas de fréquence boost. La ligne conserve une source qui indique que l'indice est estimé.
+- **Alternative écartée :** laisser l'indice vide, ce qui rend le CPU neutre dans la règle d'équilibre CPU/GPU.
+- **Pourquoi :** le catalogue contient par exemple le Celeron G6900 avec 2 cœurs et une fréquence de base de 3,4 GHz, mais sans fréquence boost ; une valeur basse et signalée est plus utile qu'une absence totale d'indice.
+- **Conséquences :** cet indice n'est pas directement comparable à un indice calculé avec la fréquence boost ; il reste une estimation tant que la source ne fournit pas cette donnée.
+
+## D-17 · Départager RAM, cartes mères, alimentations et boîtiers par le prix
+
+- **Date :** 2026-11-18
+- **Décision :** pour la RAM, les cartes mères, les alimentations et les boîtiers, calculer la règle budget comme `budget_piece / (budget_piece + prix)`, ce qui favorise une pièce moins coûteuse tout en gardant une note entre 0 et 1. Les CPU et GPU conservent leur règle actuelle.
+- **Alternative écartée :** garder la note neutre `0.5`, qui donne le même score à toutes les pièces et laisse leur ordre dépendre de celui de PostgreSQL.
+- **Pourquoi :** ces types n'ont pas d'indice de performance dans le schéma ; le prix est le seul critère numérique commun disponible.
+- **Conséquences :** le classement est plus explicable, mais une RAM peu chère peut avoir une faible capacité. Il faudra ajouter capacité et vitesse à la collecte avant de présenter ce classement comme une comparaison technique.
+
+## D-18 · Limiter les variantes d'un chipset dans les recommandations
+
+- **Date :** 2026-11-18
+- **Décision :** ne conserver que le meilleur résultat par chipset (ou famille si le chipset manque) dans la liste finale.
+- **Alternative écartée :** afficher plusieurs références presque identiques d'une même puce, ce qui masque les autres choix disponibles.
+- **Pourquoi :** le catalogue contient de nombreuses variantes d'un GPU ; dans un essai, 7 des 10 premiers résultats étaient des RX 9060 XT.
+- **Conséquences :** la liste montre des composants plus différents, mais peut contenir moins de 10 résultats si le catalogue offre moins de 10 chipsets compatibles.

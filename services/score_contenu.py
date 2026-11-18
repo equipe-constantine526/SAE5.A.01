@@ -276,13 +276,15 @@ def regle_budget(piece, entree):
     **Reçoit :** `piece`, une fiche avec `type` et `prix` ; `entree`, contenant
     `budget` en dollars et `usage`. Le catalogue stocke `prix` en dollars.
 
-    **Renvoie :** une note entre 0 et 1. Le score vaut 1 sous la part prévue et
-    diminue selon le rapport entre cette part et le prix si elle est dépassée.
-    Les parts non précisées par le guide utilisent le budget entier, sans inventer
-    de pourcentage.
+    **Renvoie :** une note entre 0 et 1. Pour un CPU ou un GPU, le score vaut 1
+    sous la part prévue et diminue si elle est dépassée. Pour la RAM, les cartes
+    mères, les alimentations et les boîtiers, il baisse avec le prix afin de
+    départager ces pièces sans indice de performance. Les parts non précisées par
+    le guide utilisent le budget entier, sans inventer de pourcentage.
 
     **Exemple :** avec un budget de 1 200 $ et un GPU à 700 $, la part de 40 % vaut
-    480 $ ; le score vaut `480 / 700`, soit environ `0.686`.
+    480 $ ; le score vaut `480 / 700`, soit environ `0.686`. Une carte mère à 120 $
+    sans indice `perf` reçoit `1200 / (1200 + 120)`, soit environ `0.909`.
 
     **Complexité :** O(1).
     """
@@ -304,6 +306,12 @@ def regle_budget(piece, entree):
     part = PART_BUDGET_PAR_USAGE.get(usage, {}).get(type_piece, 1.0)
     budget_piece = budget * part
 
+    if type_piece not in {"cpu", "gpu"}:
+        # Choix : sans perf ni caractéristiques détaillées, favoriser une pièce
+        # moins chère donne un ordre explicable au lieu d'une égalité arbitraire.
+        # Pour la RAM, cela reste approximatif tant que capacité et vitesse manquent.
+        return budget_piece / (budget_piece + prix)
+
     if prix <= budget_piece:
         return 1.0
     return budget_piece / prix
@@ -322,6 +330,40 @@ def obtenir_score(resultat):
     **Complexité :** O(1).
     """
     return resultat["score"]
+
+
+def diversifier_resultats(resultats, top):
+    """Garde le meilleur modèle de chaque chipset ou famille dans la liste.
+
+    **Reçoit :** les résultats déjà triés par score et le nombre maximal demandé.
+    **Renvoie :** au plus `top` résultats, avec un seul élément par chipset ou famille.
+    **Exemple :** parmi plusieurs RX 9060 XT, seule la variante au score le plus haut
+    est conservée.
+    **Complexité :** O(n), n = nombre de candidats classés.
+    """
+    resultat_final = []
+    cles_vues = set()
+
+    for resultat in resultats:
+        caracteristiques = resultat.get("caracteristiques", {})
+        valeur_diversite = caracteristiques.get("chipset") or caracteristiques.get(
+            "famille"
+        )
+
+        if isinstance(valeur_diversite, str) and valeur_diversite.strip():
+            cle = (
+                caracteristiques.get("type"),
+                valeur_diversite.strip().casefold(),
+            )
+            if cle in cles_vues:
+                continue
+            cles_vues.add(cle)
+
+        resultat_final.append(resultat)
+        if len(resultat_final) == top:
+            break
+
+    return resultat_final
 
 
 def classer(candidats, entree, top=10):
@@ -367,4 +409,6 @@ def classer(candidats, entree, top=10):
             "caracteristiques": caracteristiques,
         })
     resultats.sort(key=obtenir_score, reverse=True)
-    return resultats[:top]
+    # Choix : garder le meilleur résultat par chipset/famille évite qu'une seule
+    # génération remplisse le top 10 avec ses variantes de fabricants.
+    return diversifier_resultats(resultats, top)

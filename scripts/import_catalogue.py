@@ -178,8 +178,9 @@ def _ajouter_performances(type_piece, donnees, tflops_par_chipset):
     **Reçoit :** le type interne, un `DataFrame` filtré et le dictionnaire des TFLOPS.
 
     **Renvoie :** une copie du tableau avec `tflops` et `perf`. Le CPU utilise
-    cœurs × fréquence boost ; le GPU utilise les TFLOPS FP32. Chaque valeur est
-    divisée par le maximum de son type puis multipliée par 100.
+    cœurs × fréquence boost, avec la fréquence de base en secours ; le GPU utilise
+    les TFLOPS FP32. Chaque valeur est divisée par le maximum de son type puis
+    multipliée par 100.
 
     **Exemple :** le Ryzen 5 7600 produit une valeur brute de 30.6 (6 × 5.1) ;
     une RTX 4070 utilise 29.15 TFLOPS avant normalisation dans son type.
@@ -192,7 +193,16 @@ def _ajouter_performances(type_piece, donnees, tflops_par_chipset):
 
     if type_piece == "cpu":
         coeurs = pd.to_numeric(resultat["core_count"], errors="coerce")
-        frequence = pd.to_numeric(resultat["boost_clock"], errors="coerce")
+        frequence_boost = pd.to_numeric(resultat["boost_clock"], errors="coerce")
+        if "core_clock" in resultat.columns:
+            frequence_base = pd.to_numeric(resultat["core_clock"], errors="coerce")
+        else:
+            frequence_base = pd.Series(float("nan"), index=resultat.index)
+
+        # Choix : la fréquence boost reste la référence. Quand le catalogue ne la
+        # fournit pas, la fréquence de base donne un indice approximatif plutôt qu'un
+        # perf nul qui rendrait le processeur inutilisable dans la règle d'équilibre.
+        frequence = frequence_boost.fillna(frequence_base)
         performances_brutes = coeurs * frequence
     elif type_piece == "gpu":
         valeurs_tflops = []
@@ -227,7 +237,8 @@ def _creer_ligne(type_piece, fiche):
 
     **Exemple :** une fiche `MSI GeForce RTX 3060 Ventus 2X 12G`, à `299.97`,
     avec le chipset `GeForce RTX 3060 12GB` fournit le nom, le prix, le chipset,
-    les TFLOPS associés et l'indice normalisé calculé en amont.
+    les TFLOPS associés et l'indice normalisé calculé en amont. Un CPU sans fréquence
+    boost utilise la fréquence de base et l'indique dans `source`.
     """
     ligne = {colonne: None for colonne in COLONNES_BDD}
     ligne["type"] = type_piece
@@ -242,9 +253,15 @@ def _creer_ligne(type_piece, fiche):
         ligne["frequence_boost"] = _valeur(fiche, "boost_clock")
         ligne["conso_w"] = _valeur(fiche, "tdp")
         if ligne["perf"] is not None:
-            ligne["source"] = (
-                "perf : cœurs × fréquence boost (docyx/pc-part-dataset)"
-            )
+            if ligne["frequence_boost"] is None:
+                ligne["source"] = (
+                    "perf estimée : cœurs × fréquence de base, boost absent "
+                    "(docyx/pc-part-dataset)"
+                )
+            else:
+                ligne["source"] = (
+                    "perf : cœurs × fréquence boost (docyx/pc-part-dataset)"
+                )
     elif type_piece == "carte_mere":
         ligne["socket"] = _valeur(fiche, "socket")
         ligne["format"] = _valeur(fiche, "form_factor")

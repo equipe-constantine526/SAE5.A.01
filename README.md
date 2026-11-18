@@ -20,6 +20,16 @@ psql -d rigmatch -f models/schema.sql
 Si votre base n'utilise pas `rigmatch:rigmatch@localhost`, définir la variable :
 `DATABASE_URL=postgresql://user:motdepasse@localhost:5432/rigmatch`
 
+Après avoir placé les fichiers du catalogue, `all-gpus.json` et
+`microarch_socket.csv` dans `data/`, importer puis enrichir les composants :
+
+```bash
+python -m scripts.import_catalogue
+python -m scripts.enrichissement
+```
+
+Relancer ces commandes après une réinitialisation de la base.
+
 ## Lancer
 
 ```bash
