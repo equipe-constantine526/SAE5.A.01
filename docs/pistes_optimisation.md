@@ -151,6 +151,13 @@ Type : **vitesse** (temps de réponse) ou **énergie** (batterie, réseau, resso
 - **Priorité :** basse · **Type :** énergie
 - **Statut :** à faire
 
+#### P-16 · Mises à jour SQL de l'enrichissement
+- **Maintenant :** le script exécute un `UPDATE` séparé pour chaque composant enrichi.
+- **Piste :** préparer les valeurs puis utiliser `executemany` une fois par type de composant.
+- **Mesure :** durée totale de `python -m scripts.enrichissement`.
+- **Priorité :** basse (script lancé après l'import, pas pendant une recommandation) · **Type :** vitesse
+- **Statut :** à mesurer après le 18
+
 ---
 
 ## 3. Comment on mesure

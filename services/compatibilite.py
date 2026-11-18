@@ -70,7 +70,7 @@ def compatibles(config, type_cherche):
       else []
   )
   conditions, params = [], [type_cherche]
-  tdp_total = sum(p.get("tdp_w") or 0 for p in possedes)
+  tdp_total = sum(p.get("conso_w") or 0 for p in possedes)
 
   for p in possedes:
     paire = {type_cherche, p["type"]}
@@ -152,7 +152,7 @@ def config_valide(config):
   if cm and boitier and not format_compatible(cm, boitier):
     return False, "Format de carte mère incompatible avec le boîtier."
   if alim and alim.get("puissance_w") is not None:
-    tdp_total = sum(p.get("tdp_w") or 0 for p in pieces)
+    tdp_total = sum(p.get("conso_w") or 0 for p in pieces)
     seuil = max(
         (gpu.get("alim_conseillee_w") or 0) if gpu else 0, tdp_total
     )

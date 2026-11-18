@@ -13,6 +13,10 @@ Les versions suivent la numérotation MAJEUR.MINEUR.CORRECTIF (Semantic Versioni
 - Affichage des résultats après la réponse de recommandation, avec retour au formulaire.
 - Réutilisation du composant partagé de recherche de composants dans la page de saisie.
 - Refonte visuelle de la saisie : panneau de marque, photo fondue au-dessus du formulaire et icônes des composants sélectionnés.
+- Enrichissement du catalogue enregistré dans PostgreSQL et prise en compte de la consommation des composants dans le filtre.
+- Indice de performance CPU estimé à partir de la fréquence de base lorsque la fréquence boost manque dans le catalogue.
+- Classement des composants sans indice de performance selon leur coût relatif au budget.
+- Liste de recommandations diversifiée : une seule variante par chipset ou famille.
 
 ### Ajouté
 - Page de saisie de la recommandation et envoi de la demande à l'API.
