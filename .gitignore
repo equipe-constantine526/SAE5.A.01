@@ -10,3 +10,12 @@ frontend/dist/
 !data/microarch_socket.csv
 !data/all-gpus.json
 !data/video-card.json
+!data/case.json
+!data/cpu.json
+!data/memory.json
+!data/motherboard.json
+!data/power-supply.json
+
+# Consignes et réglages locaux, absents du rendu distribué.
+/.claude/
+/CLAUDE.md

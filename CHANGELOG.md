@@ -20,6 +20,7 @@ Les versions suivent la numérotation MAJEUR.MINEUR.CORRECTIF (Semantic Versioni
 - Page des résultats harmonisée avec la charte RigMatch et palette centralisée en variables CSS.
 - Détail du composant et configuration possédée affichés dans les résultats, avec indices arrondis à deux décimales.
 - La saisie bloque comme cible un type de composant déjà indiqué comme possédé.
+- Ajoute la licence MIT du code et les notices des catalogues et de la photo.
 
 ### Ajouté
 - Page de saisie de la recommandation et envoi de la demande à l'API.
