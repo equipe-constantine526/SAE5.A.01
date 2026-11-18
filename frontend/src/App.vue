@@ -49,8 +49,16 @@ body,
   margin: 0;
 }
 
+html,
 body {
-  background: #f4f7f6;
+  overflow-x: clip;
+}
+
+body {
+  background: var(--color-papier);
+  color: var(--color-encre);
+  font-family: var(--font-body);
+  font-synthesis: none;
 }
 
 *,
@@ -60,17 +68,42 @@ body {
 }
 
 .actions-resultats {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.9rem clamp(1rem, 4vw, 3rem);
+  background: var(--color-papier);
 }
 
 .bouton-retour {
   padding: 0.6rem 0.9rem;
-  border: 0;
-  border-radius: 0.4rem;
-  background: #2f5f4e;
-  color: #fff;
+  border: 1px solid var(--color-bordeaux);
+  border-radius: var(--radius-card);
+  background: var(--color-bordeaux);
+  color: var(--color-citron);
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+.bouton-retour:hover {
+  background: var(--color-bordeaux-hover);
+}
+
+.bouton-retour:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.bouton-retour:active {
+  background: var(--color-orange);
+  color: var(--color-orange-ink);
+}
+
+.bouton-retour:disabled {
+  border-color: var(--color-desactive);
+  background: var(--color-desactive);
+  color: var(--color-encre-desactive);
+  cursor: not-allowed;
 }
 </style>

@@ -150,6 +150,22 @@ Modèle :
 - **Pourquoi :** le catalogue contient de nombreuses variantes d'un GPU ; dans un essai, 7 des 10 premiers résultats étaient des RX 9060 XT.
 - **Conséquences :** la liste montre des composants plus différents, mais peut contenir moins de 10 résultats si le catalogue offre moins de 10 chipsets compatibles.
 
+## D-19 · Centraliser les tokens visuels du frontend
+
+- **Date :** 2026-11-18
+- **Décision :** définir les couleurs, typographies, espacements et rayons partagés dans `frontend/src/assets/tokens.css`, chargé par le point d'entrée Vue.
+- **Alternatives écartées :** redéfinir les mêmes valeurs dans chaque vue ou garder la palette limitée au formulaire.
+- **Pourquoi :** la saisie et les résultats doivent partager la même identité visuelle, et les prochaines vues pourront reprendre les mêmes valeurs.
+- **Conséquences :** les vues peuvent utiliser les mêmes variables CSS ; toute modification de la charte se fait dans un seul fichier.
+
+## D-20 · Recommander uniquement un type de composant manquant
+
+- **Date :** 2026-11-18
+- **Décision :** désactiver comme cible de recommandation tout type déjà présent dans la configuration, et retirer ce type des options de recherche des composants possédés.
+- **Alternative écartée :** autoriser une recommandation de GPU lorsque l'utilisateur indique déjà posséder un GPU, ce qui rend la saisie contradictoire.
+- **Pourquoi :** la liste doit chercher une pièce qui complète la configuration. Si une ancienne sauvegarde contient ce conflit, la page le signale et empêche l'envoi sans supprimer silencieusement le composant.
+- **Conséquences :** pour rechercher un type déjà déclaré, l'utilisateur doit d'abord retirer la pièce concernée de sa configuration.
+
 ## D-21 · Séparer la licence du code et celles des ressources tierces
 
 - Date : 2026-11-18

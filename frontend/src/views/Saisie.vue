@@ -33,7 +33,28 @@ const erreurEnvoi = ref('')
 const erreurSauvegarde = ref('')
 const message = ref('')
 
-const formulaireValide = computed(() => Number(budget.value) > 0 && usage.value && typeCherche.value)
+const typesDejaPossedes = computed(() => (
+  new Set(composants.value.map((composant) => composant.type))
+))
+const typeChercheDejaPossede = computed(() => (
+  typesDejaPossedes.value.has(typeCherche.value)
+))
+const typesRechercheDisponibles = computed(() => (
+  typesComposants.filter((type) => type.valeur !== typeCherche.value)
+))
+const formulaireValide = computed(() => (
+  Number(budget.value) > 0
+  && usage.value
+  && typeCherche.value
+  && !typeChercheDejaPossede.value
+))
+
+watch(typeCherche, (nouveauType) => {
+  if (typeRecherche.value === nouveauType) {
+    // Choix : garder la recherche utilisable sans supprimer la pièce que l'utilisateur possède.
+    typeRecherche.value = typesComposants.find((type) => type.valeur !== nouveauType)?.valeur || ''
+  }
+})
 
 /**
  * Restaure le formulaire depuis le stockage local du navigateur.
@@ -121,6 +142,8 @@ onMounted(restaurerSaisie)
  * @example ajouterComposant({ id: 412, nom: "AMD Ryzen 5 7600", prix: 199 }) l'ajoute à la configuration.
  */
 function ajouterComposant(composant) {
+  if (typeRecherche.value === typeCherche.value) return
+
   const dejaAjoute = composants.value.some((element) => element.id === composant.id)
   if (!dejaAjoute) {
     // Choix : le parent ajoute le type sélectionné, car l'API renvoie la fiche sans type de recherche.
@@ -149,6 +172,7 @@ async function envoyerRecommandation() {
   envoiEnCours.value = true
   erreurEnvoi.value = ''
   message.value = ''
+  enregistrerSaisie()
 
   const demande = {
     composants: composants.value.map((composant) => composant.id),
@@ -236,10 +260,18 @@ async function envoyerRecommandation() {
               <div class="champ-formulaire champ-complet">
                 <label for="type-cherche">Composant à recommander</label>
                 <select id="type-cherche" v-model="typeCherche" required>
-                  <option v-for="type in typesComposants" :key="type.valeur" :value="type.valeur">
-                    {{ type.libelle }}
+                  <option
+                    v-for="type in typesComposants"
+                    :key="type.valeur"
+                    :value="type.valeur"
+                    :disabled="typesDejaPossedes.has(type.valeur)"
+                  >
+                    {{ type.libelle }}{{ typesDejaPossedes.has(type.valeur) ? ' · déjà possédé' : '' }}
                   </option>
                 </select>
+                <p v-if="typeChercheDejaPossede" class="erreur" role="alert">
+                  Vous possédez déjà un composant de ce type. Retirez-le ou choisissez un autre type à recommander.
+                </p>
               </div>
             </div>
           </section>
@@ -251,7 +283,7 @@ async function envoyerRecommandation() {
             <div class="champ-formulaire">
               <label for="type-composant">Type de composant</label>
               <select id="type-composant" v-model="typeRecherche">
-                <option v-for="type in typesComposants" :key="type.valeur" :value="type.valeur">
+                <option v-for="type in typesRechercheDisponibles" :key="type.valeur" :value="type.valeur">
                   {{ type.libelle }}
                 </option>
               </select>
@@ -336,34 +368,6 @@ async function envoyerRecommandation() {
  * theme: RigMatch bordeaux / citron / orange · studied: yes · DNA-source: image reference
  */
 .page-saisie {
-  --color-bordeaux: #200c0c;
-  --color-bordeaux-hover: #351714;
-  --color-citron: #d5fb91;
-  --color-orange: #f08a31;
-  --color-orange-ink: #29170f;
-  --color-papier: #fbf9f5;
-  --color-surface: #fffdf9;
-  --color-encre: #281f1c;
-  --color-encre-douce: #6e625c;
-  --color-texte-sombre: #f2e8df;
-  --color-texte-sombre-doux: #d2bdb1;
-  --color-regle: #e7dcd2;
-  --color-regle-sombre: rgb(255 255 255 / 18%);
-  --color-focus: #ad4c1d;
-  --color-erreur: #a3332d;
-  --color-desactive: #d2cbc4;
-  --color-encre-desactive: #453b36;
-  --font-display: "Trebuchet MS", "Segoe UI", sans-serif;
-  --font-body: "Segoe UI", "Trebuchet MS", sans-serif;
-  --space-xs: 0.5rem;
-  --space-sm: 1rem;
-  --space-md: 1.5rem;
-  --space-lg: 2rem;
-  --space-xl: 3rem;
-  --space-2xl: 4rem;
-  --radius-card: 0.4rem;
-  --radius-input: 0.35rem;
-
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   width: 100%;
