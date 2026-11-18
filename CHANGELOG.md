@@ -17,6 +17,7 @@ Les versions suivent la numérotation MAJEUR.MINEUR.CORRECTIF (Semantic Versioni
 - Indice de performance CPU estimé à partir de la fréquence de base lorsque la fréquence boost manque dans le catalogue.
 - Classement des composants sans indice de performance selon leur coût relatif au budget.
 - Liste de recommandations diversifiée : une seule variante par chipset ou famille.
+- Ajoute la licence MIT du code et les notices des catalogues et de la photo.
 
 ### Ajouté
 - Page de saisie de la recommandation et envoi de la demande à l'API.

@@ -2,6 +2,10 @@
 
 Application de recommandation de composants PC : API Flask et frontend Vue. Le frontend communique uniquement avec l'API.
 
+## Dépôt du projet
+
+Code source, historique et pull requests : [github.com/equipe-constantine526/SAE5.A.01](https://github.com/equipe-constantine526/SAE5.A.01).
+
 ## Installation
 
 ```bash
@@ -20,8 +24,8 @@ psql -d rigmatch -f models/schema.sql
 Si votre base n'utilise pas `rigmatch:rigmatch@localhost`, définir la variable :
 `DATABASE_URL=postgresql://user:motdepasse@localhost:5432/rigmatch`
 
-Après avoir placé les fichiers du catalogue, `all-gpus.json` et
-`microarch_socket.csv` dans `data/`, importer puis enrichir les composants :
+Les instantanés des catalogues et les fichiers d'enrichissement nécessaires sont
+fournis dans `data/`. Importer puis enrichir les composants :
 
 ```bash
 python -m scripts.import_catalogue
@@ -83,6 +87,12 @@ tests/            pytest
 | `GET /api/stats` | | `[{"methode", "min", "max", "moyenne", "nb"}]` |
 
 Toute modification de ce contrat se décide en équipe et se note ici.
+
+## Licences et attribution
+
+Le code de RigMatch est sous licence MIT (voir `LICENSE`). Les catalogues et la
+photo ont leurs propres licences et sources, répertoriées dans
+`THIRD_PARTY_NOTICES.md`.
 
 ## Règles
 
